@@ -8,6 +8,7 @@ using SharpVulkan;
 using MathNet;
 using MathNet.Numerics.LinearAlgebra;
 using System.Collections.Generic;
+using System.Text;
 
 namespace Vulkan.Engine
 {
@@ -23,6 +24,9 @@ namespace Vulkan.Engine
         private Instance instance;
 
         private List<string> availableLayerNames = new List<string> ();
+
+        private DebugReportCallback debugReportCallback;
+        private DebugReportCallbackDelegate debugReport;
 
         private static void Main ()
         {
@@ -68,15 +72,22 @@ namespace Vulkan.Engine
                 Glfw3.PollEvents ();
         }
 
-        private void Cleanup ()
+        private unsafe void Cleanup ()
         {
             // Glfw3.Destroy (window);
             // TODO: No clue how to do this
 
-            unsafe
+            if (debugReportCallback != DebugReportCallback.Null)
             {
-                instance.Destroy ();
+                var destroyDebugReportCallbackName = Encoding.ASCII.GetBytes("vkDestroyDebugReportCallbackEXT");
+                fixed (byte* destroyDebugReportCallbackNamePointer = &destroyDebugReportCallbackName[0])
+                {
+                    var destroyDebugReportCallback = Marshal.GetDelegateForFunctionPointer<DestroyDebugReportCallbackDelegate>(instance.GetProcAddress(destroyDebugReportCallbackNamePointer));
+                    destroyDebugReportCallback(instance, debugReportCallback, null);
+                }
             }
+
+            instance.Destroy ();
 
             Glfw3.Terminate ();
         }
@@ -91,7 +102,7 @@ namespace Vulkan.Engine
 
             string[] extensions = Glfw3.GetRequiredInstanceExtensions();
 
-            IntPtr[] enabledExtensionNames = new IntPtr[extensions.Length];
+            IntPtr[] enabledExtensionNames = new IntPtr[extensions.Length + 1];
 
             IntPtr[] availableLayers = new IntPtr [availableLayerNames.Count];
 
@@ -121,6 +132,8 @@ namespace Vulkan.Engine
                 for (int i = 0; i < extensions.Length; i++)
                     enabledExtensionNames[i] = Marshal.StringToHGlobalAnsi(extensions[i]);
 
+                enabledExtensionNames [enabledExtensionNames.Length - 1] = Marshal.StringToHGlobalAnsi ("VK_EXT_debug_report");
+
                 fixed (void* enabledExtensionNamesPointer = &enabledExtensionNames[0])
                 fixed (void* enabledLayerNamesPointer = &availableLayers [0])
                 {
@@ -128,7 +141,7 @@ namespace Vulkan.Engine
                     {
                         StructureType = StructureType.InstanceCreateInfo,
                         ApplicationInfo = new IntPtr(&appInfo),
-                        EnabledExtensionCount = (uint)extensions.Length,
+                        EnabledExtensionCount = (uint)enabledExtensionNames.Length,
                         EnabledExtensionNames = new IntPtr(enabledExtensionNamesPointer),
                     };
 
@@ -140,18 +153,42 @@ namespace Vulkan.Engine
 
                     instance = SharpVulkan.Vulkan.CreateInstance(ref createInfo);
                 }
+
+                if (enableValidationLayers)
+                {
+                    byte [] createDebugReportCallbackName = Encoding.ASCII.GetBytes("vkCreateDebugReportCallbackEXT");
+                    fixed (byte* createDebugReportCallbackNamePointer = &createDebugReportCallbackName[0])
+                    {
+                        CreateDebugReportCallbackDelegate createDebugReportCallback = Marshal.GetDelegateForFunctionPointer<CreateDebugReportCallbackDelegate>(instance.GetProcAddress(createDebugReportCallbackNamePointer));
+
+                        debugReport = DebugReport;
+                        DebugReportCallbackCreateInfo createInfo = new DebugReportCallbackCreateInfo
+                        {
+                            StructureType = StructureType.DebugReportCallbackCreateInfo,
+                            Flags = (uint)(DebugReportFlags.Error | DebugReportFlags.Warning | DebugReportFlags.PerformanceWarning),
+                            Callback = Marshal.GetFunctionPointerForDelegate(debugReport)
+                        };
+                        createDebugReportCallback(instance, ref createInfo, null, out debugReportCallback);
+                    }
+                }
             }
             finally
             {
                 Marshal.FreeHGlobal(appName);
                 Marshal.FreeHGlobal(engineName);
 
-                for (int i = 0; i < extensions.Length; i++)
+                for (int i = 0; i < enabledExtensionNames.Length; i++)
                     Marshal.FreeHGlobal(enabledExtensionNames[i]);
 
                 foreach (IntPtr i in availableLayers)
                     Marshal.FreeHGlobal (i);
             }
+        }
+
+        private static RawBool DebugReport(DebugReportFlags flags, DebugReportObjectType objectType, ulong @object, PointerSize location, int messageCode, string layerPrefix, string message, IntPtr userData)
+        {
+            Console.WriteLine($"{flags}: {message} ([{messageCode}] {layerPrefix})");
+            return true;
         }
 
         private unsafe bool CheckValidationLayerSupport ()
@@ -203,5 +240,14 @@ namespace Vulkan.Engine
 
             return true;
         }
+
+        [UnmanagedFunctionPointer(CallingConvention.StdCall, CharSet = CharSet.Ansi)]
+        private unsafe delegate RawBool DebugReportCallbackDelegate(DebugReportFlags flags, DebugReportObjectType objectType, ulong @object, PointerSize location, int messageCode, string layerPrefix, string message, IntPtr userData);
+
+        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        private unsafe delegate Result CreateDebugReportCallbackDelegate(Instance instance, ref DebugReportCallbackCreateInfo createInfo, AllocationCallbacks* allocator, out DebugReportCallback callback);
+
+        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        private unsafe delegate Result DestroyDebugReportCallbackDelegate(Instance instance, DebugReportCallback debugReportCallback, AllocationCallbacks* allocator);
     }
 }
