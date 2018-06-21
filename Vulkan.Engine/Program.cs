@@ -1,14 +1,11 @@
 ﻿using System;
+using System.Text;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 
 using SharpVk.Glfw;
 
 using SharpVulkan;
-
-using MathNet;
-using MathNet.Numerics.LinearAlgebra;
-using System.Collections.Generic;
-using System.Text;
 
 namespace Vulkan.Engine
 {
@@ -22,6 +19,7 @@ namespace Vulkan.Engine
         private WindowHandle window;
         
         private Instance instance;
+        private PhysicalDevice physicalDevice;
 
         private List<string> availableLayerNames = new List<string> ();
 
@@ -64,6 +62,35 @@ namespace Vulkan.Engine
         private void InitVulkan ()
         {
             CreateInstance ();
+
+            PickPhysicalDevice ();
+        }
+
+        private void PickPhysicalDevice ()
+        {
+            PhysicalDevice [] devices = instance.PhysicalDevices;
+
+            if (devices.Length == 0)
+                throw new Exception ("No GPUs with Vulkan support found.");
+
+            foreach (PhysicalDevice d in devices)
+            {
+                if (IsDeviceSuitable (d))
+                {
+                    physicalDevice = d;
+                    break;
+                }
+            }
+
+            if (physicalDevice == null)
+                throw new Exception ("Failed to find a suitable GPU.");
+        }
+
+        private bool IsDeviceSuitable (PhysicalDevice device)
+        {
+            QueueFamilyIndices indices = FindQueueFamilies (device);
+
+            return indices.IsComplete ();
         }
 
         private void MainLoop ()
@@ -239,6 +266,35 @@ namespace Vulkan.Engine
             }
 
             return true;
+        }
+
+        private QueueFamilyIndices FindQueueFamilies (PhysicalDevice device)
+        {
+            QueueFamilyIndices indices = new QueueFamilyIndices ();
+
+            int i = 0;
+            foreach (QueueFamilyProperties queueFamily in device.QueueFamilyProperties)
+            {
+                if (queueFamily.QueueCount > 0 && (queueFamily.QueueFlags & QueueFlags.Graphics) != 0)
+                    indices.GraphicsFamily = i;
+
+                if (indices.IsComplete ())
+                    break;
+
+                i++;
+            }
+
+            return indices;
+        }
+
+        class QueueFamilyIndices
+        {
+            public int GraphicsFamily = -1;
+
+            public bool IsComplete ()
+            {
+                return GraphicsFamily >= 0;
+            }
         }
 
         [UnmanagedFunctionPointer(CallingConvention.StdCall, CharSet = CharSet.Ansi)]
