@@ -20,6 +20,9 @@ namespace Vulkan.Engine
         
         private Instance instance;
         private PhysicalDevice physicalDevice;
+        private Device device;
+
+        private Queue graphicsQueue;
 
         private List<string> availableLayerNames = new List<string> ();
 
@@ -64,6 +67,8 @@ namespace Vulkan.Engine
             CreateInstance ();
 
             PickPhysicalDevice ();
+
+            CreateLogicalDevice ();
         }
 
         private void PickPhysicalDevice ()
@@ -84,6 +89,63 @@ namespace Vulkan.Engine
 
             if (physicalDevice == null)
                 throw new Exception ("Failed to find a suitable GPU.");
+        }
+
+        private unsafe void CreateLogicalDevice ()
+        {
+            QueueFamilyIndices indices = FindQueueFamilies (physicalDevice);
+            float queuePriority = 1.0f;
+
+            IntPtr[] availableLayers = new IntPtr[availableLayerNames.Count];
+
+            try
+            {
+                LayerProperties[] availableLayerProperties = SharpVulkan.Vulkan.InstanceLayerProperties;
+                for (int i = 0; i < availableLayers.Length; i++)
+                {
+                    fixed (void* propertyNamePointer = &availableLayerProperties[i].LayerName.Value0)
+                    {
+                        string propertyLayerName = Marshal.PtrToStringAnsi(new IntPtr(propertyNamePointer));
+
+                        availableLayers[i] = Marshal.StringToHGlobalAnsi(propertyLayerName);
+                    }
+                }
+
+                DeviceQueueCreateInfo queueCreateInfo = new DeviceQueueCreateInfo
+                {
+                    StructureType = StructureType.DeviceQueueCreateInfo,
+                    QueueFamilyIndex = (uint) indices.GraphicsFamily,
+                    QueueCount = 1,
+                    QueuePriorities = new IntPtr (&queuePriority)
+                };
+
+                PhysicalDeviceFeatures deviceFeatures = new PhysicalDeviceFeatures ();
+
+                DeviceCreateInfo createInfo = new DeviceCreateInfo
+                {
+                    StructureType = StructureType.DeviceCreateInfo,
+                    QueueCreateInfos = new IntPtr (&queueCreateInfo),
+                    QueueCreateInfoCount = 1,
+                    EnabledFeatures = new IntPtr (&deviceFeatures)
+                };
+
+                createInfo.EnabledExtensionCount = 0;
+
+                fixed (void* layersPointer = &availableLayers[0])
+                if (enableValidationLayers)
+                {
+                    createInfo.EnabledLayerCount = (uint) availableLayers.Length;
+                    createInfo.EnabledLayerNames = new IntPtr (layersPointer);
+                }
+
+                device = physicalDevice.CreateDevice (ref createInfo);
+                graphicsQueue = device.GetQueue ((uint) indices.GraphicsFamily, 0);
+            }
+            finally
+            {
+                foreach (IntPtr i in availableLayers)
+                    Marshal.FreeHGlobal(i);
+            }
         }
 
         private bool IsDeviceSuitable (PhysicalDevice device)
@@ -114,6 +176,7 @@ namespace Vulkan.Engine
                 }
             }
 
+            device.Destroy ();
             instance.Destroy ();
 
             Glfw3.Terminate ();
