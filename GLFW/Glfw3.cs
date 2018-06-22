@@ -31,8 +31,17 @@ namespace SharpVk.Glfw
         [DllImport(GlfwDll, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwWindowShouldClose")]
         public static extern bool WindowShouldClose(WindowHandle window);
 
-        // [DllImport(GlfwDll, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwCreateWindowSurface")]
-        // public static extern Result CreateWindowSurface(Interop.Instance instance, WindowHandle window, Interop.AllocationCallbacks* pAllocator, out ulong surface);
+        [DllImport(GlfwDll, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwCreateWindowSurface")]
+        public unsafe static extern Result glfwCreateWindowSurface (Instance instance, WindowHandle window, AllocationCallbacks* pAllocator, Surface* surface);
+
+        public unsafe static Surface CreateWindowSurface (Instance instance, WindowHandle window, AllocationCallbacks* pAllocator = null)
+        {
+            Surface surface;
+            
+            glfwCreateWindowSurface (instance, window, null, &surface);
+
+            return surface;
+        }
 
         [DllImport(GlfwDll, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwGetRequiredInstanceExtensions")]
         public static extern byte** GetRequiredInstanceExtensions(out int count);

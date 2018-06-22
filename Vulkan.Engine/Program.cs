@@ -23,11 +23,14 @@ namespace Vulkan.Engine
         private Device device;
 
         private Queue graphicsQueue;
+        private Queue presentQueue;
 
         private List<string> availableLayerNames = new List<string> ();
 
         private DebugReportCallback debugReportCallback;
         private DebugReportCallbackDelegate debugReport;
+
+        private Surface surface;
 
         private static void Main ()
         {
@@ -66,9 +69,16 @@ namespace Vulkan.Engine
         {
             CreateInstance ();
 
+            CreateSurface ();
+
             PickPhysicalDevice ();
 
             CreateLogicalDevice ();
+        }
+
+        private unsafe void CreateSurface ()
+        {
+            surface = Glfw3.CreateWindowSurface (instance, window);
         }
 
         private void PickPhysicalDevice ()
@@ -94,7 +104,28 @@ namespace Vulkan.Engine
         private unsafe void CreateLogicalDevice ()
         {
             QueueFamilyIndices indices = FindQueueFamilies (physicalDevice);
+
+            List<DeviceQueueCreateInfo> queueCreateInfos = new List<DeviceQueueCreateInfo> ();
+            SortedSet<int> uniqueQueueFamilies = new SortedSet<int>
+            {
+                indices.GraphicsFamily,
+                indices.PresentFamily
+            };
+
             float queuePriority = 1.0f;
+
+            foreach (int queueFamily in uniqueQueueFamilies)
+            {
+                DeviceQueueCreateInfo queueCreateInfo = new DeviceQueueCreateInfo
+                {
+                    StructureType = StructureType.DeviceQueueCreateInfo,
+                    QueueFamilyIndex = (uint) queueFamily,
+                    QueueCount = 1,
+                    QueuePriorities = new IntPtr (&queuePriority)
+                };
+
+                queueCreateInfos.Add (queueCreateInfo);
+            }
 
             IntPtr[] availableLayers = new IntPtr[availableLayerNames.Count];
 
@@ -111,21 +142,29 @@ namespace Vulkan.Engine
                     }
                 }
 
-                DeviceQueueCreateInfo queueCreateInfo = new DeviceQueueCreateInfo
-                {
-                    StructureType = StructureType.DeviceQueueCreateInfo,
-                    QueueFamilyIndex = (uint) indices.GraphicsFamily,
-                    QueueCount = 1,
-                    QueuePriorities = new IntPtr (&queuePriority)
-                };
+                // DeviceQueueCreateInfo queueCreateInfo = new DeviceQueueCreateInfo
+                // {
+                //     StructureType = StructureType.DeviceQueueCreateInfo,
+                //     QueueFamilyIndex = (uint) indices.GraphicsFamily,
+                //     QueueCount = 1,
+                //     QueuePriorities = new IntPtr (&queuePriority)
+                // };
 
                 PhysicalDeviceFeatures deviceFeatures = new PhysicalDeviceFeatures ();
+
+                IntPtr result = Marshal.AllocHGlobal(Marshal.SizeOf(typeof(DeviceQueueCreateInfo)) * queueCreateInfos.Count);
+                IntPtr c = new IntPtr(result.ToInt32());
+                for (int i = 0; i < queueCreateInfos.Count; i++)
+                {
+                    Marshal.StructureToPtr(queueCreateInfos[i], c, true);
+                    c = new IntPtr(c.ToInt32() + Marshal.SizeOf(typeof(DeviceQueueCreateInfo)));
+                }
 
                 DeviceCreateInfo createInfo = new DeviceCreateInfo
                 {
                     StructureType = StructureType.DeviceCreateInfo,
-                    QueueCreateInfos = new IntPtr (&queueCreateInfo),
-                    QueueCreateInfoCount = 1,
+                    QueueCreateInfos = result,
+                    QueueCreateInfoCount = (uint) queueCreateInfos.Count,
                     EnabledFeatures = new IntPtr (&deviceFeatures)
                 };
 
@@ -140,6 +179,7 @@ namespace Vulkan.Engine
 
                 device = physicalDevice.CreateDevice (ref createInfo);
                 graphicsQueue = device.GetQueue ((uint) indices.GraphicsFamily, 0);
+                presentQueue = device.GetQueue ((uint) indices.PresentFamily, 0);
             }
             finally
             {
@@ -177,6 +217,7 @@ namespace Vulkan.Engine
             }
 
             device.Destroy ();
+            instance.DestroySurface (surface);
             instance.Destroy ();
 
             Glfw3.Terminate ();
@@ -341,6 +382,11 @@ namespace Vulkan.Engine
                 if (queueFamily.QueueCount > 0 && (queueFamily.QueueFlags & QueueFlags.Graphics) != 0)
                     indices.GraphicsFamily = i;
 
+                RawBool presentSupport = device.GetSurfaceSupport ((uint) i, surface);
+
+                if (queueFamily.QueueCount > 0 && presentSupport)
+                    indices.PresentFamily = i;
+
                 if (indices.IsComplete ())
                     break;
 
@@ -353,10 +399,11 @@ namespace Vulkan.Engine
         class QueueFamilyIndices
         {
             public int GraphicsFamily = -1;
+            public int PresentFamily = -1;
 
             public bool IsComplete ()
             {
-                return GraphicsFamily >= 0;
+                return GraphicsFamily >= 0 && PresentFamily >= 0;
             }
         }
 
