@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Text;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
@@ -22,10 +23,20 @@ namespace Vulkan.Engine
         private PhysicalDevice physicalDevice;
         private Device device;
 
+        private Swapchain swapChain;
+        private List<Image> swapChainImages = new List<Image> ();
+        private Format swapChainImageFormat;
+        private Extent2D swapChainExtent;
+
         private Queue graphicsQueue;
         private Queue presentQueue;
 
         private List<string> availableLayerNames = new List<string> ();
+
+        private List<string> deviceExtensions = new List<string>
+        {
+            "VK_KHR_swapchain"
+        };
 
         private DebugReportCallback debugReportCallback;
         private DebugReportCallbackDelegate debugReport;
@@ -74,6 +85,8 @@ namespace Vulkan.Engine
             PickPhysicalDevice ();
 
             CreateLogicalDevice ();
+        
+            CreateSwapChain ();
         }
 
         private unsafe void CreateSurface ()
@@ -129,6 +142,8 @@ namespace Vulkan.Engine
 
             IntPtr[] availableLayers = new IntPtr[availableLayerNames.Count];
 
+            IntPtr [] extensionNames = new IntPtr [deviceExtensions.Count];
+
             try
             {
                 LayerProperties[] availableLayerProperties = SharpVulkan.Vulkan.InstanceLayerProperties;
@@ -141,14 +156,6 @@ namespace Vulkan.Engine
                         availableLayers[i] = Marshal.StringToHGlobalAnsi(propertyLayerName);
                     }
                 }
-
-                // DeviceQueueCreateInfo queueCreateInfo = new DeviceQueueCreateInfo
-                // {
-                //     StructureType = StructureType.DeviceQueueCreateInfo,
-                //     QueueFamilyIndex = (uint) indices.GraphicsFamily,
-                //     QueueCount = 1,
-                //     QueuePriorities = new IntPtr (&queuePriority)
-                // };
 
                 PhysicalDeviceFeatures deviceFeatures = new PhysicalDeviceFeatures ();
 
@@ -168,7 +175,13 @@ namespace Vulkan.Engine
                     EnabledFeatures = new IntPtr (&deviceFeatures)
                 };
 
-                createInfo.EnabledExtensionCount = 0;
+                createInfo.EnabledExtensionCount = (uint) deviceExtensions.Count;
+                
+                for (int i = 0; i < deviceExtensions.Count; i++)
+                    extensionNames [i] = Marshal.StringToHGlobalAnsi (deviceExtensions [i]);
+
+                fixed (void* extensionNamesPointer = &extensionNames[0])                
+                createInfo.EnabledExtensionNames = new IntPtr (extensionNamesPointer);
 
                 fixed (void* layersPointer = &availableLayers[0])
                 if (enableValidationLayers)
@@ -185,6 +198,9 @@ namespace Vulkan.Engine
             {
                 foreach (IntPtr i in availableLayers)
                     Marshal.FreeHGlobal(i);
+
+                foreach (IntPtr i in extensionNames)
+                    Marshal.FreeHGlobal (i);
             }
         }
 
@@ -192,7 +208,36 @@ namespace Vulkan.Engine
         {
             QueueFamilyIndices indices = FindQueueFamilies (device);
 
-            return indices.IsComplete ();
+            bool extensionsSupported = CheckDeviceExtensionSupport (device);
+
+            bool swapChainAdequate = false;
+
+            if (extensionsSupported)
+            {
+                SwapChainSupportDetails swapChainSupport = QuerySwapChainSupport (device);
+                swapChainAdequate = !(swapChainSupport.Formats.Count == 0) && !(swapChainSupport.PresentModes.Count == 0);
+            }
+
+            return indices.IsComplete () && extensionsSupported && swapChainAdequate;
+        }
+
+        private unsafe bool CheckDeviceExtensionSupport (PhysicalDevice device)
+        {
+            SortedSet<string> requiredExtensions = new SortedSet<string> ();
+            
+            foreach (string ext in deviceExtensions)
+                requiredExtensions.Add (ext);
+
+            foreach (ExtensionProperties extension in device.GetDeviceExtensionProperties ())
+            {
+                void* extensionPointer = &extension.ExtensionName.Value0;
+
+                string extensionName = Marshal.PtrToStringAnsi (new IntPtr (extensionPointer));
+
+                requiredExtensions.Remove (extensionName);
+            }
+
+            return requiredExtensions.Count == 0;
         }
 
         private void MainLoop ()
@@ -216,6 +261,7 @@ namespace Vulkan.Engine
                 }
             }
 
+            device.DestroySwapchain (swapChain);
             device.Destroy ();
             instance.DestroySurface (surface);
             instance.Destroy ();
@@ -396,6 +442,126 @@ namespace Vulkan.Engine
             return indices;
         }
 
+        private SwapChainSupportDetails QuerySwapChainSupport (PhysicalDevice device)
+        {
+            SwapChainSupportDetails details = new SwapChainSupportDetails ();
+
+            device.GetSurfaceCapabilities (surface, out details.Capabilities);
+
+            details.Formats = device.GetSurfaceFormats (surface).ToList ();
+
+            details.PresentModes = device.GetSurfacePresentModes (surface).ToList ();
+
+            return details;
+        }
+
+        private SurfaceFormat ChooseSwapSurfaceFormat (List<SurfaceFormat> availableFormats)
+        {
+            if (availableFormats.Count == 1 && availableFormats [0].Format == Format.Undefined)
+                return new SurfaceFormat
+                {
+                    Format = Format.B8G8R8A8UNorm,
+                    ColorSpace = ColorSpace.SRgbNonlinear
+                };
+
+            foreach (SurfaceFormat availableFormat in availableFormats)
+                if (availableFormat.Format == Format.B8G8R8A8UNorm && availableFormat.ColorSpace == ColorSpace.SRgbNonlinear)
+                    return availableFormat;
+
+            return availableFormats [0];
+        }
+
+        private PresentMode ChooseSwapPresentMode (List<PresentMode> availablePresentModes)
+        {
+            PresentMode bestMode = PresentMode.Fifo;
+
+            foreach (PresentMode presentMode in availablePresentModes)
+                if (presentMode == PresentMode.Mailbox)
+                    return presentMode;
+                else if (presentMode == PresentMode.Immediate)
+                    bestMode = presentMode;
+
+            return bestMode;
+        }
+
+        private Extent2D ChooseSwapExtent (SurfaceCapabilities capabilities)
+        {
+            if (capabilities.CurrentExtent.Width != uint.MaxValue)
+                return capabilities.CurrentExtent;
+            else
+            {
+                Extent2D actualExtent = new Extent2D
+                {
+                    Width = WindowWidth,
+                    Height = WindowHeight
+                };
+
+                actualExtent.Width = Math.Max (capabilities.MinImageExtent.Width, Math.Min (capabilities.MaxImageExtent.Width, actualExtent.Width));
+                actualExtent.Height = Math.Max (capabilities.MinImageExtent.Height, Math.Min (capabilities.MaxImageExtent.Height, actualExtent.Height));
+
+                return actualExtent;
+            }
+        }
+
+        private unsafe void CreateSwapChain ()
+        {
+            SwapChainSupportDetails swapChainSupport = QuerySwapChainSupport (physicalDevice);
+
+            SurfaceFormat surfaceFormat = ChooseSwapSurfaceFormat (swapChainSupport.Formats);
+            PresentMode presentMode = ChooseSwapPresentMode (swapChainSupport.PresentModes);
+            Extent2D extent = ChooseSwapExtent (swapChainSupport.Capabilities);
+
+            uint imageCount = swapChainSupport.Capabilities.MinImageCount + 1;
+            if (swapChainSupport.Capabilities.MaxImageCount > 0 && imageCount > swapChainSupport.Capabilities.MaxImageCount)
+                imageCount = swapChainSupport.Capabilities.MaxImageCount;
+
+            SwapchainCreateInfo createInfo = new SwapchainCreateInfo
+            {
+                StructureType = StructureType.SwapchainCreateInfo,
+                Surface = surface,
+                MinImageCount = imageCount,
+                ImageFormat = surfaceFormat.Format,
+                ImageColorSpace = surfaceFormat.ColorSpace,
+                ImageExtent = extent,
+                ImageArrayLayers = 1,
+                ImageUsage = ImageUsageFlags.ColorAttachment
+            };
+
+            QueueFamilyIndices indices = FindQueueFamilies (physicalDevice);
+
+            uint [] queueFamilyIndices = new uint []
+            {
+                (uint) indices.GraphicsFamily,
+                (uint) indices.PresentFamily
+            };
+
+            fixed (void* queueFamilyIndicesPointer = queueFamilyIndices)
+            if (indices.GraphicsFamily != indices.PresentFamily)
+            {
+                createInfo.ImageSharingMode = SharingMode.Concurrent;
+                createInfo.QueueFamilyIndexCount = 2;
+                createInfo.QueueFamilyIndices = new IntPtr (queueFamilyIndicesPointer);
+            }
+            else
+            {
+                createInfo.ImageSharingMode = SharingMode.Exclusive;
+                createInfo.QueueFamilyIndexCount = 0;
+                createInfo.QueueFamilyIndices = new IntPtr (null);
+            }
+
+            createInfo.PreTransform = swapChainSupport.Capabilities.CurrentTransform;
+            createInfo.CompositeAlpha = CompositeAlphaFlags.Opaque;
+            createInfo.PresentMode = presentMode;
+            createInfo.Clipped = true;
+            createInfo.OldSwapchain = Swapchain.Null;
+
+            swapChain = device.CreateSwapchain (ref createInfo);
+
+            swapChainImages = device.GetSwapchainImages (swapChain).ToList ();
+            swapChainImageFormat = surfaceFormat.Format;
+            swapChainExtent = extent;
+        }
+
         class QueueFamilyIndices
         {
             public int GraphicsFamily = -1;
@@ -405,6 +571,13 @@ namespace Vulkan.Engine
             {
                 return GraphicsFamily >= 0 && PresentFamily >= 0;
             }
+        }
+
+        class SwapChainSupportDetails
+        {
+            public SurfaceCapabilities Capabilities;
+            public List<SurfaceFormat> Formats;
+            public List<PresentMode> PresentModes; 
         }
 
         [UnmanagedFunctionPointer(CallingConvention.StdCall, CharSet = CharSet.Ansi)]
