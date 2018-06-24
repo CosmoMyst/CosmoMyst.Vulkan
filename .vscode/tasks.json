@@ -7,7 +7,7 @@
             "type": "process",
             "args": [
                 "build",
-                "${workspaceFolder}/Vulkan.Engine/Vulkan.Engine.csproj"
+                "${workspaceFolder}/MonoMyst.Vulkan/MonoMyst.Vulkan.csproj"
             ],
             "problemMatcher": "$msCompile"
         }

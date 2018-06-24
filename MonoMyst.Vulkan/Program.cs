@@ -8,7 +8,7 @@ using SharpVk.Glfw;
 
 using SharpVulkan;
 
-namespace Vulkan.Engine
+namespace MonoMyst.Vulkan
 {
     public class Program
     {
@@ -73,7 +73,7 @@ namespace Vulkan.Engine
             // Glfw3.WindowHint (Glfw3.Hint.Resizable, false);
             // TODO: No clue how to do this with my GLFW bindings
 
-            window = Glfw3.CreateWindow (WindowWidth, WindowHeight, "Vulkan", IntPtr.Zero, IntPtr.Zero);
+            window = Glfw3.CreateWindow (WindowWidth, WindowHeight, "MonoMyst.Vulkan", IntPtr.Zero, IntPtr.Zero);
         }
 
         private void InitVulkan ()
