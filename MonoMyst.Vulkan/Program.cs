@@ -92,6 +92,13 @@ namespace MonoMyst.Vulkan
             CreateSwapChain ();
 
             CreateImageViews ();
+        
+            CreateGraphicsPipeline ();
+        }
+
+        private void CreateGraphicsPipeline ()
+        {
+
         }
 
         private unsafe void CreateImageViews ()

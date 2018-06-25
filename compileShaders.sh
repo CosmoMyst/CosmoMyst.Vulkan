@@ -1,0 +1,2 @@
+/home/codemyst/Downloads/VulkanSDK/1.1.73.0/x86_64/bin/glslangValidator -V MonoMyst.Vulkan/Shaders/shader.vert -o MonoMyst.Vulkan/Shaders/vert.spv
+/home/codemyst/Downloads/VulkanSDK/1.1.73.0/x86_64/bin/glslangValidator -V MonoMyst.Vulkan/Shaders/shader.frag -o MonoMyst.Vulkan/Shaders/frag.spv
