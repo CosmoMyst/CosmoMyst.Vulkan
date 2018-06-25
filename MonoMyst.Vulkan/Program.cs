@@ -7,16 +7,12 @@ using System.Runtime.InteropServices;
 using SharpVk.Glfw;
 
 using SharpVulkan;
+using System.Diagnostics;
 
 namespace MonoMyst.Vulkan
 {
     public class Program
     {
-        //test delete later
-
-
-
-        //
         private const int WindowWidth = 800;
         private const int WindowHeight = 600;
 
@@ -30,8 +26,10 @@ namespace MonoMyst.Vulkan
 
         private Swapchain swapChain;
         private List<Image> swapChainImages = new List<Image> ();
+        private List<ImageView> swapChainImageViews = new List<ImageView> ();
         private Format swapChainImageFormat;
         private Extent2D swapChainExtent;
+
 
         private Queue graphicsQueue;
         private Queue presentQueue;
@@ -92,6 +90,35 @@ namespace MonoMyst.Vulkan
             CreateLogicalDevice ();
         
             CreateSwapChain ();
+
+            CreateImageViews ();
+        }
+
+        private unsafe void CreateImageViews ()
+        {
+            for (int i = 0; i < swapChainImages.Count; i++)
+            {
+                ImageViewCreateInfo createInfo = new ImageViewCreateInfo
+                {
+                    StructureType = StructureType.ImageViewCreateInfo,
+                    Image = swapChainImages [i],
+                    ViewType = ImageViewType.Image2D,
+                    Format = swapChainImageFormat,
+                };
+
+                createInfo.Components.R = ComponentSwizzle.Identity;
+                createInfo.Components.G = ComponentSwizzle.Identity;
+                createInfo.Components.B = ComponentSwizzle.Identity;
+                createInfo.Components.A = ComponentSwizzle.Identity;
+
+                createInfo.SubresourceRange.AspectMask = ImageAspectFlags.Color;
+                createInfo.SubresourceRange.BaseMipLevel = 0;
+                createInfo.SubresourceRange.LevelCount = 1;
+                createInfo.SubresourceRange.BaseArrayLayer = 0;
+                createInfo.SubresourceRange.LayerCount = 1;
+
+                swapChainImageViews.Add (device.CreateImageView (ref createInfo));
+            }
         }
 
         private unsafe void CreateSurface ()
@@ -115,7 +142,7 @@ namespace MonoMyst.Vulkan
                 }
             }
 
-            if (physicalDevice == null)
+            if (physicalDevice == PhysicalDevice.Null)
                 throw new Exception ("Failed to find a suitable GPU.");
         }
 
@@ -265,6 +292,9 @@ namespace MonoMyst.Vulkan
                     destroyDebugReportCallback(instance, debugReportCallback, null);
                 }
             }
+
+            foreach (ImageView imageView in swapChainImageViews)
+                device.DestroyImageView (imageView);
 
             device.DestroySwapchain (swapChain);
             device.Destroy ();
