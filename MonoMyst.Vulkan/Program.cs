@@ -130,6 +130,42 @@ namespace MonoMyst.Vulkan
             };
 
             device.AllocateCommandBuffers (ref allocateInfo, (CommandBuffer*) Marshal.UnsafeAddrOfPinnedArrayElement (commandBuffers, 0));
+
+            for (int i = 0; i < commandBuffers.Length; i++)
+            {
+                CommandBufferBeginInfo beginInfo = new CommandBufferBeginInfo
+                {
+                    StructureType = StructureType.CommandBufferBeginInfo,
+                    Flags = CommandBufferUsageFlags.SimultaneousUse,
+                    InheritanceInfo = IntPtr.Zero
+                };
+
+                commandBuffers [i].Begin (ref beginInfo);
+
+                ClearValue* clearValues = stackalloc ClearValue[2];
+                clearValues[0].Color.Float32 = new ClearColorValue.Float32Array { Value0 = 0, Value1 = 0, Value2 = 0, Value3 = 1 };
+                clearValues[1].DepthStencil.Depth = 1;
+
+                RenderPassBeginInfo renderPassInfo = new RenderPassBeginInfo
+                {
+                    StructureType = StructureType.RenderPassBeginInfo,
+                    RenderPass = renderPass,
+                    Framebuffer = swapChainFramebuffers [i],
+                    RenderArea = new Rect2D (new Offset2D (0, 0), swapChainExtent),
+                    ClearValueCount = 2,
+                    ClearValues = (IntPtr) clearValues
+                };
+
+                commandBuffers [i].BeginRenderPass (ref renderPassInfo, SubpassContents.Inline);
+
+                commandBuffers [i].BindPipeline (PipelineBindPoint.Graphics, graphicsPipeline);
+
+                commandBuffers [i].Draw (3, 1, 0, 0);
+
+                commandBuffers [i].EndRenderPass ();
+
+                commandBuffers [i].End ();
+            }
         }
 
         private unsafe void CreateCommandPool ()
