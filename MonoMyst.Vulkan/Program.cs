@@ -31,6 +31,8 @@ namespace MonoMyst.Vulkan
         private Format swapChainImageFormat;
         private Extent2D swapChainExtent;
 
+        private Framebuffer [] swapChainFramebuffers;
+
         private RenderPass renderPass;
         private PipelineLayout pipelineLayout;
 
@@ -104,6 +106,32 @@ namespace MonoMyst.Vulkan
             CreateRenderPass ();
         
             CreateGraphicsPipeline ();
+
+            CreateFramebuffers ();
+        }
+
+        private unsafe void CreateFramebuffers ()
+        {
+            swapChainFramebuffers = new Framebuffer [swapChainImageViews.Count];
+
+            for (int i = 0; i < swapChainImageViews.Count; i++)
+            {
+                ImageView* attachments = stackalloc ImageView [1];
+                attachments [0] = swapChainImageViews [i];
+
+                FramebufferCreateInfo framebufferInfo = new FramebufferCreateInfo
+                {
+                    StructureType = StructureType.FramebufferCreateInfo,
+                    RenderPass = renderPass,
+                    AttachmentCount = 1,
+                    Attachments = (IntPtr) attachments,
+                    Width = swapChainExtent.Width,
+                    Height = swapChainExtent.Height,
+                    Layers = 1
+                };
+
+                swapChainFramebuffers [i] = device.CreateFramebuffer (ref framebufferInfo);
+            }
         }
 
         private unsafe void CreateRenderPass ()
@@ -409,7 +437,7 @@ namespace MonoMyst.Vulkan
             try
             {
                 LayerProperties[] availableLayerProperties = SharpVulkan.Vulkan.InstanceLayerProperties;
-                for (int i = 0; i < availableLayers.Length; i++)
+                for (int i = 0; i < availableLayerNames.Count; i++)
                 {
                     fixed (void* propertyNamePointer = &availableLayerProperties[i].LayerName.Value0)
                     {
@@ -448,7 +476,7 @@ namespace MonoMyst.Vulkan
                 fixed (void* layersPointer = &availableLayers[0])
                 if (enableValidationLayers)
                 {
-                    createInfo.EnabledLayerCount = (uint) availableLayers.Length;
+                    createInfo.EnabledLayerCount = (uint) availableLayerNames.Count;
                     createInfo.EnabledLayerNames = new IntPtr (layersPointer);
                 }
 
@@ -522,6 +550,9 @@ namespace MonoMyst.Vulkan
                     destroyDebugReportCallback(instance, debugReportCallback, null);
                 }
             }
+
+            foreach (var f in swapChainFramebuffers)
+                device.DestroyFramebuffer (f);
 
             device.DestroyPipeline (graphicsPipeline);
             device.DestroyPipelineLayout (pipelineLayout);
