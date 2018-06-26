@@ -34,6 +34,7 @@ namespace MonoMyst.Vulkan
         private Framebuffer [] swapChainFramebuffers;
 
         private CommandPool commandPool;
+        private CommandBuffer [] commandBuffers;
 
         private RenderPass renderPass;
         private PipelineLayout pipelineLayout;
@@ -112,6 +113,23 @@ namespace MonoMyst.Vulkan
             CreateFramebuffers ();
 
             CreateCommandPool ();
+
+            CreateCommandBuffers ();
+        }
+
+        private unsafe void CreateCommandBuffers ()
+        {
+            commandBuffers = new CommandBuffer [swapChainFramebuffers.Length];
+
+            CommandBufferAllocateInfo allocateInfo = new CommandBufferAllocateInfo
+            {
+                StructureType = StructureType.CommandBufferAllocateInfo,
+                CommandPool = commandPool,
+                Level = CommandBufferLevel.Primary,
+                CommandBufferCount = (uint) commandBuffers.Length
+            };
+
+            device.AllocateCommandBuffers (ref allocateInfo, (CommandBuffer*) Marshal.UnsafeAddrOfPinnedArrayElement (commandBuffers, 0));
         }
 
         private unsafe void CreateCommandPool ()
