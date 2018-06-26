@@ -33,6 +33,8 @@ namespace MonoMyst.Vulkan
 
         private Framebuffer [] swapChainFramebuffers;
 
+        private CommandPool commandPool;
+
         private RenderPass renderPass;
         private PipelineLayout pipelineLayout;
 
@@ -108,6 +110,22 @@ namespace MonoMyst.Vulkan
             CreateGraphicsPipeline ();
 
             CreateFramebuffers ();
+
+            CreateCommandPool ();
+        }
+
+        private unsafe void CreateCommandPool ()
+        {
+            QueueFamilyIndices indices = FindQueueFamilies (physicalDevice);
+        
+            CommandPoolCreateInfo poolInfo = new CommandPoolCreateInfo
+            {
+                StructureType = StructureType.CommandPoolCreateInfo,
+                QueueFamilyIndex = (uint) indices.GraphicsFamily,
+                Flags = 0
+            };
+
+            commandPool = device.CreateCommandPool (ref poolInfo);
         }
 
         private unsafe void CreateFramebuffers ()
@@ -550,6 +568,8 @@ namespace MonoMyst.Vulkan
                     destroyDebugReportCallback(instance, debugReportCallback, null);
                 }
             }
+
+            device.DestroyCommandPool (commandPool);
 
             foreach (var f in swapChainFramebuffers)
                 device.DestroyFramebuffer (f);
