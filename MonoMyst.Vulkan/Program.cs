@@ -1,13 +1,14 @@
 ﻿using System;
+using System.IO;
 using System.Linq;
 using System.Text;
+using System.Diagnostics;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 
 using SharpVk.Glfw;
 
 using SharpVulkan;
-using System.Diagnostics;
 
 namespace MonoMyst.Vulkan
 {
@@ -30,6 +31,10 @@ namespace MonoMyst.Vulkan
         private Format swapChainImageFormat;
         private Extent2D swapChainExtent;
 
+        private RenderPass renderPass;
+        private PipelineLayout pipelineLayout;
+
+        private Pipeline graphicsPipeline;
 
         private Queue graphicsQueue;
         private Queue presentQueue;
@@ -60,11 +65,14 @@ namespace MonoMyst.Vulkan
             }
         }
 
-        public void Run ()
+        public unsafe void Run ()
         {
             InitWindow ();
+
             InitVulkan ();
+
             MainLoop ();
+            
             Cleanup ();
         }
 
@@ -92,13 +100,228 @@ namespace MonoMyst.Vulkan
             CreateSwapChain ();
 
             CreateImageViews ();
+
+            CreateRenderPass ();
         
             CreateGraphicsPipeline ();
         }
 
-        private void CreateGraphicsPipeline ()
+        private unsafe void CreateRenderPass ()
         {
+            AttachmentDescription colorAttachment = new AttachmentDescription
+            {
+                Format = swapChainImageFormat,
+                Samples = SampleCountFlags.Sample1,
+                LoadOperation = AttachmentLoadOperation.Clear,
+                StoreOperation = AttachmentStoreOperation.Store,
+                StencilLoadOperation = AttachmentLoadOperation.DontCare,
+                StencilStoreOperation = AttachmentStoreOperation.DontCare,
+                InitialLayout = ImageLayout.Undefined,
+                FinalLayout = ImageLayout.PresentSource
+            };
 
+            AttachmentReference colorAttachmentRef = new AttachmentReference
+            {
+                Attachment = 0,
+                Layout = ImageLayout.ColorAttachmentOptimal
+            };
+
+            SubpassDescription subpass = new SubpassDescription
+            {
+                PipelineBindPoint = PipelineBindPoint.Graphics,
+                ColorAttachmentCount = 1,
+                ColorAttachments = new IntPtr (&colorAttachmentRef)
+            };
+
+            RenderPassCreateInfo renderPassInfo = new RenderPassCreateInfo
+            {
+                StructureType = StructureType.RenderPassCreateInfo,
+                AttachmentCount = 1,
+                Attachments = new IntPtr (&colorAttachment),
+                SubpassCount = 1,
+                Subpasses = new IntPtr (&subpass)
+            };
+
+            renderPass = device.CreateRenderPass (ref renderPassInfo);
+        }
+
+        private unsafe void CreateGraphicsPipeline ()
+        {
+            ShaderModule vertShaderModule;
+            ShaderModule fragShaderModule;
+
+            vertShaderModule = CreateShaderModule (File.ReadAllBytes ($"{Environment.CurrentDirectory}/Shaders/vert.spv"));
+            fragShaderModule = CreateShaderModule (File.ReadAllBytes ($"{Environment.CurrentDirectory}/Shaders/frag.spv"));
+
+            byte [] entryPointName = System.Text.Encoding.UTF8.GetBytes("main\0");
+
+            try
+            {
+                fixed (byte* entryPointNamePointer = &entryPointName[0])
+                {
+                    PipelineShaderStageCreateInfo vertShaderStageInfo = new PipelineShaderStageCreateInfo
+                    {
+                        StructureType = StructureType.PipelineShaderStageCreateInfo,
+                        Stage = ShaderStageFlags.Vertex,
+                        Module = vertShaderModule,
+                        Name = new IntPtr (entryPointNamePointer)
+                    };
+
+                    PipelineShaderStageCreateInfo fragShaderStageInfo = new PipelineShaderStageCreateInfo
+                    {
+                        StructureType = StructureType.PipelineShaderStageCreateInfo,
+                        Stage = ShaderStageFlags.Fragment,
+                        Module = fragShaderModule,
+                        Name = new IntPtr (entryPointNamePointer)
+                    };
+
+                    PipelineShaderStageCreateInfo [] shaderStages = new PipelineShaderStageCreateInfo []
+                    {
+                        vertShaderStageInfo,
+                        fragShaderStageInfo
+                    };
+
+                    PipelineVertexInputStateCreateInfo vertexInputInfo = new PipelineVertexInputStateCreateInfo
+                    {
+                        StructureType = StructureType.PipelineVertexInputStateCreateInfo,
+                        VertexBindingDescriptionCount = 0,
+                        VertexAttributeDescriptions = IntPtr.Zero,
+                        VertexAttributeDescriptionCount = 0,
+                        VertexBindingDescriptions = IntPtr.Zero
+                    };
+
+                    PipelineInputAssemblyStateCreateInfo inputAssembly = new PipelineInputAssemblyStateCreateInfo
+                    {
+                        StructureType = StructureType.PipelineInputAssemblyStateCreateInfo,
+                        Topology = PrimitiveTopology.TriangleList,
+                        PrimitiveRestartEnable = false
+                    };
+
+                    Viewport viewport = new Viewport
+                    {
+                        X = 0.0f,
+                        Y = 0.0f,
+                        Width = (float) swapChainExtent.Width,
+                        Height = (float) swapChainExtent.Height,
+                        MinDepth = 0.0f,
+                        MaxDepth = 1.0f
+                    };
+
+                    Rect2D scissor = new Rect2D
+                    {
+                        Offset = new Offset2D (0, 0),
+                        Extent = swapChainExtent  
+                    };
+
+                    PipelineViewportStateCreateInfo viewportState = new PipelineViewportStateCreateInfo
+                    {
+                        StructureType = StructureType.PipelineViewportStateCreateInfo,
+                        ViewportCount = 1,
+                        Viewports = new IntPtr (&viewport),
+                        ScissorCount = 1,
+                        Scissors = new IntPtr (&scissor)
+                    };
+
+                    PipelineRasterizationStateCreateInfo rasterizer = new PipelineRasterizationStateCreateInfo
+                    {
+                        StructureType = StructureType.PipelineRasterizationStateCreateInfo,
+                        DepthClampEnable = false,
+                        RasterizerDiscardEnable = false,
+                        PolygonMode = PolygonMode.Fill,
+                        LineWidth = 1.0f,
+                        CullMode = CullModeFlags.Back,
+                        FrontFace = FrontFace.Clockwise,
+                        DepthBiasEnable = false,
+                        DepthBiasConstantFactor = 0.0f,
+                        DepthBiasClamp = 0.0f,
+                        DepthBiasSlopeFactor = 0.0f,
+                    };
+
+                    PipelineMultisampleStateCreateInfo multisampling = new PipelineMultisampleStateCreateInfo
+                    {
+                        StructureType = StructureType.PipelineMultisampleStateCreateInfo,
+                        SampleShadingEnable = false,
+                        RasterizationSamples = SampleCountFlags.Sample1,
+                        MinSampleShading = 1.0f,
+                        SampleMask = IntPtr.Zero,
+                        AlphaToCoverageEnable = false,
+                        AlphaToOneEnable = false
+                    };
+
+                    PipelineColorBlendAttachmentState colorBlendAttachment = new PipelineColorBlendAttachmentState
+                    {
+                        ColorWriteMask = ColorComponentFlags.R | ColorComponentFlags.G | ColorComponentFlags.B | ColorComponentFlags.A,
+                        BlendEnable = false,
+                        SourceColorBlendFactor = BlendFactor.One,
+                        DestinationColorBlendFactor = BlendFactor.Zero,
+                        ColorBlendOperation = BlendOperation.Add,
+                        SourceAlphaBlendFactor = BlendFactor.One,
+                        DestinationAlphaBlendFactor = BlendFactor.Zero,
+                        AlphaBlendOperation = BlendOperation.Add
+                    };
+
+                    PipelineColorBlendStateCreateInfo colorBlending = new PipelineColorBlendStateCreateInfo
+                    {
+                        StructureType = StructureType.PipelineColorBlendStateCreateInfo,
+                        LogicOperationEnable = false,
+                        LogicOperation = LogicOperation.Copy,
+                        AttachmentCount = 1,
+                        Attachments = new IntPtr (&colorBlendAttachment)
+                    };
+
+                    PipelineLayoutCreateInfo pipelineLayoutInfo = new PipelineLayoutCreateInfo
+                    {
+                        StructureType = StructureType.PipelineLayoutCreateInfo,
+                    };
+
+                    pipelineLayout = device.CreatePipelineLayout (ref pipelineLayoutInfo);
+
+                    fixed (PipelineShaderStageCreateInfo* shaderStagesPointer = &shaderStages [0])
+                    {
+                        GraphicsPipelineCreateInfo pipelineInfo = new GraphicsPipelineCreateInfo
+                        {
+                            StructureType = StructureType.GraphicsPipelineCreateInfo,
+                            StageCount = 2,
+                            Stages = new IntPtr (shaderStagesPointer),
+                            VertexInputState = new IntPtr (&vertexInputInfo),
+                            InputAssemblyState = new IntPtr (&inputAssembly),
+                            RasterizationState = new IntPtr (&rasterizer),
+                            MultisampleState = new IntPtr (&multisampling),
+                            ColorBlendState = new IntPtr (&colorBlending),
+                            Layout = pipelineLayout,
+                            RenderPass = renderPass,
+                            Subpass = 0,
+                            DepthStencilState = IntPtr.Zero,
+                            DynamicState = IntPtr.Zero,
+                            BasePipelineHandle = Pipeline.Null,
+                            BasePipelineIndex = -1,
+                            ViewportState = new IntPtr (&viewportState)
+                        };
+
+                        graphicsPipeline = device.CreateGraphicsPipelines (PipelineCache.Null, 1, &pipelineInfo);
+                    }
+                }
+            }
+            finally
+            {
+                device.DestroyShaderModule (vertShaderModule);
+                device.DestroyShaderModule (fragShaderModule);
+            }
+        }
+
+        private unsafe ShaderModule CreateShaderModule (byte [] code)
+        {
+            fixed (byte* codePointer = &code [0])
+            {
+                ShaderModuleCreateInfo createInfo = new ShaderModuleCreateInfo
+                {
+                    StructureType = StructureType.ShaderModuleCreateInfo,
+                    CodeSize = code.Length,
+                    Code = new IntPtr(codePointer)
+                };
+
+                return device.CreateShaderModule (ref createInfo);
+            }
         }
 
         private unsafe void CreateImageViews ()
@@ -299,6 +522,10 @@ namespace MonoMyst.Vulkan
                     destroyDebugReportCallback(instance, debugReportCallback, null);
                 }
             }
+
+            device.DestroyPipeline (graphicsPipeline);
+            device.DestroyPipelineLayout (pipelineLayout);
+            device.DestroyRenderPass (renderPass);
 
             foreach (ImageView imageView in swapChainImageViews)
                 device.DestroyImageView (imageView);
