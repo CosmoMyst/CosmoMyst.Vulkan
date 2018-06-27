@@ -1793,5 +1793,20 @@ namespace MonoMyst.Glfw
         [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwVulkanSupported"), SuppressUnmanagedCodeSecurity]
         [return: MarshalAs(UnmanagedType.Bool)]
         public static extern bool VulkanSupported();
+
+        [DllImport (kLibrary, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwGetRequiredInstanceExtensions"), SuppressUnmanagedCodeSecurity]
+        private unsafe static extern byte** glfwGetRequiredInstanceExtensions (out int count);
+
+        public unsafe static string [] GetRequiredInstanceExtensions ()
+        {
+            byte** namePointer = glfwGetRequiredInstanceExtensions (out int count);
+
+            string [] result = new string [count];
+
+            for (int i = 0; i < count; i++)
+                result [i] = Marshal.PtrToStringAnsi (new IntPtr (namePointer [i]));
+
+            return result;
+        }
     }
 }

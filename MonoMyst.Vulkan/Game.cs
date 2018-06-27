@@ -1,6 +1,7 @@
 ﻿using System;
 
 using Glfw3 = MonoMyst.Glfw.Glfw;
+using Window = MonoMyst.Glfw.Glfw.Window;
 
 namespace MonoMyst.Vulkan
 {
@@ -9,7 +10,9 @@ namespace MonoMyst.Vulkan
         private const int Width = 800;
         private const int Height = 600;
 
-        private Glfw3.Window window;
+        private Window window;
+
+        private VulkanInstance instance;
 
         public void Run ()
         {
@@ -31,7 +34,9 @@ namespace MonoMyst.Vulkan
 
         private void InitVulkan ()
         {
-
+            instance = new VulkanInstance ("MonoMyst.Vulkan");
+            instance.PrintAvailableExtensions ();
+            instance.PrintGlfwExtensions ();
         }
 
         private void Update ()
