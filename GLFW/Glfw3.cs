@@ -7,7 +7,8 @@ namespace SharpVk.Glfw
 {
     public unsafe static class Glfw3
     {
-        public const string GlfwDll = "libglfw.so";
+        public const string GlfwDll = "glfw3.dll";
+        //public const string GlfwDll = "libglfw.so";
 
         [DllImport(GlfwDll, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwInit")]
         [return: MarshalAs(UnmanagedType.Bool)]
@@ -15,6 +16,9 @@ namespace SharpVk.Glfw
 
         [DllImport(GlfwDll, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwTerminate")]
         public static extern void Terminate();
+
+        [DllImport(GlfwDll, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwDestroyWindow")]
+        public static extern void DestroyWindow (WindowHandle window);
 
         [DllImport(GlfwDll, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwGetVersion")]
         public static extern void GetVersion(out int major, out int minor, out int rev);

@@ -9,4 +9,10 @@
     <ProjectReference Include="..\SharpVulkan\SharpVulkan.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="glfw3.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>

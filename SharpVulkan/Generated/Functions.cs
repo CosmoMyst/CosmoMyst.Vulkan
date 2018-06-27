@@ -7,7 +7,8 @@ namespace SharpVulkan
 {
     public static partial class Vulkan
     {
-        internal const string LibraryName = "libvulkan.so.1";
+        //internal const string LibraryName = "libvulkan.so.1";
+        internal const string LibraryName = "vulkan-1.dll";
 
         public static unsafe Instance CreateInstance(ref InstanceCreateInfo createInfo, AllocationCallbacks* allocator = null)
         {

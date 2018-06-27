@@ -2,7 +2,6 @@
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Diagnostics;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 
@@ -16,6 +15,10 @@ namespace MonoMyst.Vulkan
     {
         private const int WindowWidth = 800;
         private const int WindowHeight = 600;
+
+        private const int MaxFramesInFlight = 2;
+
+        private int currentFrame = 0;
 
         private const bool enableValidationLayers = true;
 
@@ -44,6 +47,10 @@ namespace MonoMyst.Vulkan
         private Queue graphicsQueue;
         private Queue presentQueue;
 
+        private Semaphore [] imageAvailableSemaphores;
+        private Semaphore [] renderFinishedSemaphores;
+        private Fence [] inFlightFences;
+
         private List<string> availableLayerNames = new List<string> ();
 
         private List<string> deviceExtensions = new List<string>
@@ -68,9 +75,11 @@ namespace MonoMyst.Vulkan
             {
                 Console.WriteLine (e);
             }
+
+            Console.ReadKey ();
         }
 
-        public unsafe void Run ()
+        public void Run ()
         {
             InitWindow ();
 
@@ -115,6 +124,33 @@ namespace MonoMyst.Vulkan
             CreateCommandPool ();
 
             CreateCommandBuffers ();
+        
+            CreateSyncObjects ();
+        }
+
+        private unsafe void CreateSyncObjects ()
+        {
+            imageAvailableSemaphores = new Semaphore [MaxFramesInFlight];
+            renderFinishedSemaphores = new Semaphore [MaxFramesInFlight];
+            inFlightFences = new Fence [MaxFramesInFlight];
+
+            SemaphoreCreateInfo semaphoreInfo = new SemaphoreCreateInfo
+            {
+                StructureType = StructureType.SemaphoreCreateInfo,
+            };
+
+            FenceCreateInfo fenceInfo = new FenceCreateInfo
+            {
+                StructureType = StructureType.FenceCreateInfo,
+                Flags = FenceCreateFlags.Signaled
+            };
+
+            for (int i = 0; i < MaxFramesInFlight; i++)
+            {
+                imageAvailableSemaphores [i] = device.CreateSemaphore (ref semaphoreInfo);
+                renderFinishedSemaphores [i] = device.CreateSemaphore (ref semaphoreInfo);
+                inFlightFences [i] = device.CreateFence (ref fenceInfo);
+            }
         }
 
         private unsafe void CreateCommandBuffers ()
@@ -522,11 +558,11 @@ namespace MonoMyst.Vulkan
                 PhysicalDeviceFeatures deviceFeatures = new PhysicalDeviceFeatures ();
 
                 IntPtr result = Marshal.AllocHGlobal(Marshal.SizeOf(typeof(DeviceQueueCreateInfo)) * queueCreateInfos.Count);
-                IntPtr c = new IntPtr(result.ToInt32());
+                IntPtr c = new IntPtr(result.ToInt64());
                 for (int i = 0; i < queueCreateInfos.Count; i++)
                 {
                     Marshal.StructureToPtr(queueCreateInfos[i], c, true);
-                    c = new IntPtr(c.ToInt32() + Marshal.SizeOf(typeof(DeviceQueueCreateInfo)));
+                    c = new IntPtr(c.ToInt64() + Marshal.SizeOf(typeof(DeviceQueueCreateInfo)));
                 }
 
                 DeviceCreateInfo createInfo = new DeviceCreateInfo
@@ -605,11 +641,77 @@ namespace MonoMyst.Vulkan
         private void MainLoop ()
         {
             while (!Glfw3.WindowShouldClose (window))
+            {
                 Glfw3.PollEvents ();
+                DrawFrame ();
+            }
+
+        }
+
+        private unsafe void DrawFrame ()
+        {
+            fixed (Fence* fencePointer = &inFlightFences [currentFrame])
+            {
+                device.WaitForFences (1, fencePointer, true, ulong.MaxValue);
+                device.ResetFences (1, fencePointer);
+            }
+
+            uint imageIndex = device.AcquireNextImage (swapChain, ulong.MaxValue, imageAvailableSemaphores [currentFrame], Fence.Null);
+
+            SubmitInfo submitInfo = new SubmitInfo
+            {
+                StructureType = StructureType.SubmitInfo,
+            };
+
+            Semaphore* waitSemaphores = stackalloc Semaphore [1];
+            waitSemaphores [0] = imageAvailableSemaphores [currentFrame];
+
+            PipelineStageFlags* waitStages = stackalloc PipelineStageFlags [1];
+            waitStages [0] = PipelineStageFlags.ColorAttachmentOutput;
+
+            submitInfo.WaitSemaphoreCount = 1;
+            submitInfo.WaitSemaphores = (IntPtr) waitSemaphores;
+            submitInfo.WaitDstStageMask = (IntPtr) waitStages;
+            submitInfo.CommandBufferCount = 1;
+            submitInfo.CommandBuffers = Marshal.UnsafeAddrOfPinnedArrayElement (commandBuffers, (int) imageIndex);
+
+            Semaphore* signalSemaphores = stackalloc Semaphore [1];
+            signalSemaphores [0] = renderFinishedSemaphores [currentFrame];
+
+            submitInfo.SignalSemaphoreCount = 1;
+            submitInfo.SignalSemaphores = (IntPtr) signalSemaphores;
+
+            graphicsQueue.Submit (1, &submitInfo, inFlightFences [currentFrame]);
+
+            PresentInfo presentInfo = new PresentInfo
+            {
+                StructureType = StructureType.PresentInfo,
+                WaitSemaphoreCount = 1,
+                WaitSemaphores = (IntPtr) signalSemaphores
+            };
+
+            Swapchain* swapchains = stackalloc Swapchain [1];
+            swapchains [0] = swapChain;
+
+            presentInfo.SwapchainCount = 1;
+            presentInfo.Swapchains = (IntPtr) swapchains;
+            presentInfo.ImageIndices = new IntPtr (&imageIndex);
+            presentInfo.Results = IntPtr.Zero;
+
+            presentQueue.Present (ref presentInfo);
+
+            // graphicsQueue.WaitIdle ();
+            // presentQueue.WaitIdle ();
+
+            currentFrame = (currentFrame + 1) % MaxFramesInFlight;
         }
 
         private unsafe void Cleanup ()
         {
+            System.Console.WriteLine("cleanup");
+
+            device.WaitIdle();
+
             // Glfw3.Destroy (window);
             // TODO: No clue how to do this
 
@@ -621,6 +723,13 @@ namespace MonoMyst.Vulkan
                     var destroyDebugReportCallback = Marshal.GetDelegateForFunctionPointer<DestroyDebugReportCallbackDelegate>(instance.GetProcAddress(destroyDebugReportCallbackNamePointer));
                     destroyDebugReportCallback(instance, debugReportCallback, null);
                 }
+            }
+
+            for (int i = 0; i < MaxFramesInFlight; i++)
+            {
+                device.DestroySemaphore (renderFinishedSemaphores [i]);
+                device.DestroySemaphore (imageAvailableSemaphores [i]);
+                device.DestroyFence (inFlightFences [i]);
             }
 
             device.DestroyCommandPool (commandPool);
@@ -640,6 +749,7 @@ namespace MonoMyst.Vulkan
             instance.DestroySurface (surface);
             instance.Destroy ();
 
+            Glfw3.DestroyWindow (window);
             Glfw3.Terminate ();
         }
 

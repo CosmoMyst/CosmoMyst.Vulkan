@@ -6,4 +6,10 @@
     <NoWarn>00660;0649;0436</NoWarn>
   </PropertyGroup>
 
+  <ItemGroup>
+    <None Update="vulkan-1.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>
