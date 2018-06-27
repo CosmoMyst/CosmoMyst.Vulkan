@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Linq;
+using MonoMyst.Vulkan.Utilities;
 using System.Runtime.InteropServices;
 
 using SharpVulkan;
@@ -7,7 +9,6 @@ using Vk = SharpVulkan;
 using Version = SharpVulkan.Version;
 
 using Glfw3 = MonoMyst.Glfw.Glfw;
-using MonoMyst.Vulkan.Utilities;
 
 namespace MonoMyst.Vulkan
 {
@@ -66,6 +67,18 @@ namespace MonoMyst.Vulkan
             Console.WriteLine ("Glfw extensions:");
             foreach (string e in glfwExtensions)
                 Console.WriteLine ($"\t{e}");
+        }
+
+        public bool CheckRequiredExtensionsPresent ()
+        {
+            foreach (string g in glfwExtensions)
+            {
+                string [] properties = VulkanUtilities.ExtensionPropertiesToString (availableExtensions);
+
+                if (properties.Contains (g) == false) return false;
+            }
+
+            return true;
         }
 
         public void Dispose ()

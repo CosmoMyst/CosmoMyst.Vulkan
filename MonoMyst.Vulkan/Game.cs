@@ -1,5 +1,7 @@
 ﻿using System;
 
+using MonoMyst.Vulkan.Utilities;
+
 using Glfw3 = MonoMyst.Glfw.Glfw;
 using Window = MonoMyst.Glfw.Glfw.Window;
 
@@ -37,6 +39,10 @@ namespace MonoMyst.Vulkan
             instance = new VulkanInstance ("MonoMyst.Vulkan");
             instance.PrintAvailableExtensions ();
             instance.PrintGlfwExtensions ();
+            if (instance.CheckRequiredExtensionsPresent ())
+                Logger.WriteLine ("All required extensions are present.", ConsoleColor.Green);
+            else
+                Logger.WriteLine ("Not all required extensions are present.", ConsoleColor.Red);
         }
 
         private void Update ()
