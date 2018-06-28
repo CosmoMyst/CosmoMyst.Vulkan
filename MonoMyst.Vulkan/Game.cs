@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 
 using MonoMyst.Vulkan.Utilities;
 
@@ -7,7 +8,6 @@ using SharpVulkan;
 using Vk = SharpVulkan;
 using Glfw3 = MonoMyst.Glfw.Glfw;
 using Window = MonoMyst.Glfw.Glfw.Window;
-using System.Linq;
 
 namespace MonoMyst.Vulkan
 {
@@ -30,7 +30,7 @@ namespace MonoMyst.Vulkan
         private Window window;
 
         private VulkanInstance instance;
-        private PhysicalDevice physicalDevice;
+        private Device device;
 
         public void Run ()
         {
@@ -58,7 +58,7 @@ namespace MonoMyst.Vulkan
                 Logger.WriteLine ("All requested validation layers are available.", ConsoleColor.Green);
 
             instance = new VulkanInstance ("MonoMyst.Vulkan", EnableDebug, validationLayers);
-            physicalDevice = instance.PickPhysicalDevice ();
+            device = instance.CreateDevice ();
         }
 
         private void Update ()

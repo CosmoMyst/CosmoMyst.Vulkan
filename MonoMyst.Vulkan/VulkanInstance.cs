@@ -87,31 +87,9 @@ namespace MonoMyst.Vulkan
                 CreateDebugReport ();
         }
 
-        public PhysicalDevice PickPhysicalDevice ()
+        public Device CreateDevice ()
         {
-            PhysicalDevice result = PhysicalDevice.Null;
-
-            PhysicalDevice [] physicalDevices = instance.PhysicalDevices;
-
-            if (physicalDevices.Length == 0)
-                throw new Exception ("Failed to find GPUs with vulkan support.");
-
-            foreach (PhysicalDevice physicalDevice in physicalDevices)
-                if (IsPhysicalDeviceSuitable (physicalDevice))
-                {
-                    result = physicalDevice;
-                    break;
-                }
-
-            if (result == PhysicalDevice.Null)
-                throw new Exception ("Failed to find a suitable GPU.");
-
-            return result;
-        }
-
-        public bool IsPhysicalDeviceSuitable (PhysicalDevice physicalDevice)
-        {
-            return true;
+            return new Device (instance);
         }
 
         private void CreateDebugReport ()
