@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Runtime.InteropServices;
 
 using SharpVulkan;
 
@@ -9,14 +10,19 @@ namespace MonoMyst.Vulkan
     public unsafe class Device : IDisposable
     {
         private PhysicalDevice physicalDevice;
+        private Vk.Device logicalDevice;
 
         private Instance instance;
 
-        public Device (Instance instance)
+        private readonly bool enableDebug;
+
+        public Device (Instance instance, bool enableDebug)
         {
             this.instance = instance;
+            this.enableDebug = enableDebug;
 
             PickPhysicalDevice ();
+            CreateLogicalDevice ();
         }
 
         private void PickPhysicalDevice ()
@@ -44,6 +50,56 @@ namespace MonoMyst.Vulkan
             return indices.IsComplete ();
         }
 
+        private void CreateLogicalDevice ()
+        {
+            QueueFamilyIndices indices = FindQueueFamilies (physicalDevice);
+
+            float* queuePriorities = stackalloc float [1];
+            queuePriorities [0] = 1.0f;
+
+            DeviceQueueCreateInfo queueCreateInfo = new DeviceQueueCreateInfo
+            {
+                StructureType = StructureType.DeviceQueueCreateInfo,
+                QueueFamilyIndex = (uint) indices.GraphicsFamily,
+                QueueCount = 1,
+                QueuePriorities = (IntPtr) queuePriorities,
+            };
+
+            PhysicalDeviceFeatures deviceFeatures = new PhysicalDeviceFeatures ();
+
+            DeviceCreateInfo createInfo = new DeviceCreateInfo
+            {
+                StructureType = StructureType.DeviceCreateInfo,
+                QueueCreateInfoCount = 1,
+                QueueCreateInfos = new IntPtr (&queueCreateInfo),
+                EnabledFeatures = new IntPtr (&deviceFeatures),
+                EnabledExtensionCount = 0
+            };
+
+            IntPtr [] validationLayersPtr = null;
+            if (enableDebug)
+            {
+                createInfo.EnabledLayerCount = (uint) Game.ValidationLayers.Length;
+
+                validationLayersPtr = new IntPtr [Game.ValidationLayers.Length];
+                for (int i = 0; i < Game.ValidationLayers.Length; i++)
+                    validationLayersPtr [i] = Marshal.StringToHGlobalAnsi (Game.ValidationLayers [i]);
+
+                fixed (void* validationLayersPointer = &validationLayersPtr [0])
+                    createInfo.EnabledLayerNames = new IntPtr (validationLayersPointer);
+            }
+            else
+            {
+                createInfo.EnabledLayerCount = 0;
+            }
+
+            logicalDevice = physicalDevice.CreateDevice (ref createInfo);
+
+            if (enableDebug)
+                foreach (IntPtr i in validationLayersPtr)
+                    Marshal.FreeHGlobal (i);
+        }
+
         private QueueFamilyIndices FindQueueFamilies (PhysicalDevice device)
         {
             QueueFamilyIndices indices = new QueueFamilyIndices ();
@@ -64,6 +120,7 @@ namespace MonoMyst.Vulkan
 
         public void Dispose ()
         {
+            logicalDevice.Destroy ();
         }
     }
 }

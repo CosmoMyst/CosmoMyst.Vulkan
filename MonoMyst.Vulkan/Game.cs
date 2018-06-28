@@ -19,7 +19,7 @@ namespace MonoMyst.Vulkan
         private const bool EnableDebug = false;
 #endif
 
-        private readonly string [] validationLayers = new string []
+        public static readonly string [] ValidationLayers = new string []
         {
             VulkanConstants.VK_STANDARD_VALIDATION
         };
@@ -57,7 +57,7 @@ namespace MonoMyst.Vulkan
             else
                 Logger.WriteLine ("All requested validation layers are available.", ConsoleColor.Green);
 
-            instance = new VulkanInstance ("MonoMyst.Vulkan", EnableDebug, validationLayers);
+            instance = new VulkanInstance ("MonoMyst.Vulkan", EnableDebug);
             device = instance.CreateDevice ();
         }
 
@@ -71,7 +71,7 @@ namespace MonoMyst.Vulkan
         {
             LayerProperties [] layerProperties = Vk.Vulkan.InstanceLayerProperties;
 
-            foreach (string layerName in validationLayers)
+            foreach (string layerName in ValidationLayers)
             {
                 string [] props = VulkanUtilities.LayerPropertiesToString (layerProperties);
 

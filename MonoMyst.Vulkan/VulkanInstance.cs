@@ -24,7 +24,7 @@ namespace MonoMyst.Vulkan
         private DebugReportCallback debugReportCallback;
         private DebugReportCallbackDelegate debugReportCallbackFunctionReference;
 
-        public VulkanInstance (string appName, bool enableDebug = false, string [] validationLayers = null)
+        public VulkanInstance (string appName, bool enableDebug = false)
         {
             this.enableDebug = enableDebug;
 
@@ -56,11 +56,11 @@ namespace MonoMyst.Vulkan
             IntPtr [] validationLayersPtr = null;
             if (enableDebug)
             {
-                createInfo.EnabledLayerCount = (uint) validationLayers.Length;
+                createInfo.EnabledLayerCount = (uint) Game.ValidationLayers.Length;
 
-                validationLayersPtr = new IntPtr [validationLayers.Length];
-                for (int i = 0; i < validationLayers.Length; i++)
-                    validationLayersPtr [i] = Marshal.StringToHGlobalAnsi (validationLayers [i]);
+                validationLayersPtr = new IntPtr [Game.ValidationLayers.Length];
+                for (int i = 0; i < Game.ValidationLayers.Length; i++)
+                    validationLayersPtr [i] = Marshal.StringToHGlobalAnsi (Game.ValidationLayers [i]);
 
                 fixed (void* validationLayersPointer = &validationLayersPtr [0])
                 createInfo.EnabledLayerNames = new IntPtr (validationLayersPointer);
@@ -81,7 +81,7 @@ namespace MonoMyst.Vulkan
 
             if (enableDebug)
                 foreach (IntPtr i in validationLayersPtr)
-                Marshal.FreeHGlobal (i);
+                    Marshal.FreeHGlobal (i);
 
             if (enableDebug)
                 CreateDebugReport ();
@@ -89,7 +89,7 @@ namespace MonoMyst.Vulkan
 
         public Device CreateDevice ()
         {
-            return new Device (instance);
+            return new Device (instance, enableDebug);
         }
 
         private void CreateDebugReport ()
@@ -128,10 +128,11 @@ namespace MonoMyst.Vulkan
                         Logger.WriteLine (string.Format ("VULKAN PERFORMANCE WARNING ({0}): ", objectType) + message, ConsoleColor.Green);
                     } break;
 
-                case DebugReportFlags.Information:
-                    {
-                        Logger.WriteLine (string.Format ("VULKAN INFORMATION ({0}): ", objectType) + message, ConsoleColor.Cyan);
-                    } break;
+                // TODO: This information is annoying and generally just spams. Maybe make a switch to enable this *if really needed*
+                //case DebugReportFlags.Information:
+                //    {
+                //        Logger.WriteLine (string.Format ("VULKAN INFORMATION ({0}): ", objectType) + message, ConsoleColor.Cyan);
+                //    } break;
 
                 case DebugReportFlags.Debug:
                     {
