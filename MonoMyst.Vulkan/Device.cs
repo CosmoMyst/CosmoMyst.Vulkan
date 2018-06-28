@@ -37,9 +37,29 @@ namespace MonoMyst.Vulkan
                 throw new Exception ("Failed to find a suitable GPU.");
         }
 
-        private bool IsPhysicalDeviceSuitable (PhysicalDevice physicalDevice)
+        private bool IsPhysicalDeviceSuitable (PhysicalDevice device)
         {
-            return true;
+            QueueFamilyIndices indices = FindQueueFamilies (device);
+
+            return indices.IsComplete ();
+        }
+
+        private QueueFamilyIndices FindQueueFamilies (PhysicalDevice device)
+        {
+            QueueFamilyIndices indices = new QueueFamilyIndices ();
+
+            QueueFamilyProperties [] properties = device.QueueFamilyProperties;
+
+            for (int i = 0; i < properties.Length; i++)
+            {
+                if (properties [i].QueueCount > 0 && (properties [i].QueueFlags & QueueFlags.Graphics) != 0)
+                    indices.GraphicsFamily = i;
+
+                if (indices.IsComplete ())
+                    break;
+            }
+
+            return indices;
         }
 
         public void Dispose ()
