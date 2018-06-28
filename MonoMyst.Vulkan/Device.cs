@@ -12,6 +12,8 @@ namespace MonoMyst.Vulkan
         private PhysicalDevice physicalDevice;
         private Vk.Device logicalDevice;
 
+        private Queue graphicsQueue;
+
         private Instance instance;
 
         private readonly bool enableDebug;
@@ -94,6 +96,8 @@ namespace MonoMyst.Vulkan
             }
 
             logicalDevice = physicalDevice.CreateDevice (ref createInfo);
+
+            graphicsQueue = logicalDevice.GetQueue ((uint) indices.GraphicsFamily, 0);
 
             if (enableDebug)
                 foreach (IntPtr i in validationLayersPtr)
