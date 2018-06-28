@@ -1,9 +1,10 @@
 ﻿using System;
-using System.Linq;
-using MonoMyst.Vulkan.Utilities;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 
 using SharpVulkan;
+
+using MonoMyst.Vulkan.Utilities;
 
 using Vk = SharpVulkan;
 using Version = SharpVulkan.Version;
@@ -17,10 +18,16 @@ namespace MonoMyst.Vulkan
         private readonly Instance instance;
 
         private readonly ExtensionProperties [] availableExtensions;
-        private readonly string [] glfwExtensions;
 
-        public VulkanInstance (string appName)
+        private readonly bool enableDebug;
+
+        private DebugReportCallback debugReportCallback;
+        private DebugReportCallbackDelegate debugReportCallbackFunctionReference;
+
+        public VulkanInstance (string appName, bool enableDebug = false, string [] validationLayers = null)
         {
+            this.enableDebug = enableDebug;
+
             ApplicationInfo appInfo = new ApplicationInfo
             {
                 StructureType = StructureType.ApplicationInfo,
@@ -31,19 +38,35 @@ namespace MonoMyst.Vulkan
                 ApiVersion = Vk.Vulkan.ApiVersion
             };
 
-            glfwExtensions = Glfw3.GetRequiredInstanceExtensions ();
-            IntPtr* glfwExtensionsPointer = stackalloc IntPtr [glfwExtensions.Length];
-            for (int i = 0; i < glfwExtensions.Length; i++)
-                glfwExtensionsPointer [i] = Marshal.StringToHGlobalAnsi (glfwExtensions [i]);
+            string [] extensions = GetRequiredExtensions ();
+
+            IntPtr* extensionsPointer = stackalloc IntPtr [extensions.Length];
+            for (int i = 0; i < extensions.Length; i++)
+                extensionsPointer [i] = Marshal.StringToHGlobalAnsi (extensions [i]);
 
             InstanceCreateInfo createInfo = new InstanceCreateInfo
             {
                 StructureType = StructureType.InstanceCreateInfo,
                 ApplicationInfo = new IntPtr (&appInfo),
-                EnabledExtensionCount = (uint) glfwExtensions.Length,
-                EnabledExtensionNames = new IntPtr (glfwExtensionsPointer),
+                EnabledExtensionCount = (uint) extensions.Length,
+                EnabledExtensionNames = new IntPtr (extensionsPointer),
                 EnabledLayerCount = 0
             };
+
+            if (enableDebug)
+            {
+                createInfo.EnabledLayerCount = (uint) validationLayers.Length;
+
+                IntPtr* validationLayersPointer = stackalloc IntPtr [validationLayers.Length];
+                for (int i = 0; i < validationLayers.Length; i++)
+                    validationLayersPointer [i] = Marshal.StringToHGlobalAnsi (validationLayers [i]);
+
+                createInfo.EnabledLayerNames = new IntPtr (validationLayersPointer);
+            }
+            else
+            {
+                createInfo.EnabledLayerCount = 0;
+            }
 
             instance = Vk.Vulkan.CreateInstance (ref createInfo);
 
@@ -51,39 +74,85 @@ namespace MonoMyst.Vulkan
 
             Marshal.FreeHGlobal (appInfo.ApplicationName);
             Marshal.FreeHGlobal (appInfo.EngineName);
-            for (int i = 0; i < glfwExtensions.Length; i++)
-                Marshal.FreeHGlobal (glfwExtensionsPointer [i]);
+            for (int i = 0; i < extensions.Length; i++)
+                Marshal.FreeHGlobal (extensionsPointer [i]);
+
+            if (enableDebug)
+                Marshal.FreeHGlobal (createInfo.EnabledLayerNames);
+
+            if (enableDebug)
+                CreateDebugReport ();
         }
 
-        public void PrintAvailableExtensions ()
+        private void CreateDebugReport ()
         {
-            Console.WriteLine ("Available extensions:");
-            foreach (ExtensionProperties e in availableExtensions)
-                Console.WriteLine ($"\t{VulkanUtilities.ExtensionPropertiesToString (e)}");
-        }
-
-        public void PrintGlfwExtensions ()
-        {
-            Console.WriteLine ("Glfw extensions:");
-            foreach (string e in glfwExtensions)
-                Console.WriteLine ($"\t{e}");
-        }
-
-        public bool CheckRequiredExtensionsPresent ()
-        {
-            foreach (string g in glfwExtensions)
+            VulkanUtilities.CallFunctionOnInstance<CreateDebugReportDelegate> (instance, "vkCreateDebugReportCallbackEXT", (func) =>
             {
-                string [] properties = VulkanUtilities.ExtensionPropertiesToString (availableExtensions);
+                debugReportCallbackFunctionReference = new DebugReportCallbackDelegate (Debug);
+                DebugReportCallbackCreateInfo debugInfo = new DebugReportCallbackCreateInfo
+                {
+                    StructureType = StructureType.DebugReportCallbackCreateInfo,
+                    Flags = (uint) (DebugReportFlags.Error | DebugReportFlags.Information | DebugReportFlags.PerformanceWarning | DebugReportFlags.Warning),
+                    Callback = Marshal.GetFunctionPointerForDelegate (debugReportCallbackFunctionReference),
+                    UserData = IntPtr.Zero
+                };
+                fixed (DebugReportCallback* debugReportCallbackPointer = &debugReportCallback)
+                    func (instance, &debugInfo, null, debugReportCallbackPointer);
+            });
+        }
 
-                if (properties.Contains (g) == false) return false;
+        private void Debug (DebugReportFlags flags, DebugReportObjectType objectType, ulong obj, PointerSize location, int code, string layerPrefix, string message, IntPtr userData)
+        {
+            switch (flags)
+            {
+                case DebugReportFlags.Error:
+                    {
+                        Logger.WriteLine (string.Format ("VULKAN ERROR ({0}): ", objectType) + message, ConsoleColor.Red);
+                    } break;
+
+                case DebugReportFlags.Warning:
+                    {
+                        Logger.WriteLine (string.Format ("VULKAN WARNING ({0}): ", objectType) + message, ConsoleColor.Yellow);
+                    } break;
+
+                case DebugReportFlags.PerformanceWarning:
+                    {
+                        Logger.WriteLine (string.Format ("VULKAN PERFORMANCE WARNING ({0}): ", objectType) + message, ConsoleColor.Green);
+                    } break;
+
+                case DebugReportFlags.Information:
+                    {
+                        Logger.WriteLine (string.Format ("VULKAN INFORMATION ({0}): ", objectType) + message, ConsoleColor.Cyan);
+                    } break;
+
+                case DebugReportFlags.Debug:
+                    {
+                        Logger.WriteLine (string.Format ("VULKAN DEBUG ({0}): ", objectType) + message, ConsoleColor.Gray);
+                    } break;
             }
+        }
 
-            return true;
+        private string [] GetRequiredExtensions ()
+        {
+            List<string> extensions = new List<string> ();
+
+            extensions.AddRange (Glfw3.GetRequiredInstanceExtensions ());
+
+            extensions.Add (VulkanConstants.VK_DEBUG_REPORT);
+
+            return extensions.ToArray ();
         }
 
         public void Dispose ()
         {
+            if (enableDebug)
+                VulkanUtilities.CallFunctionOnInstance<DestroyDebugReportDelegate> (instance, "vkDestroyDebugReportCallbackEXT", func => func (instance, debugReportCallback, null));
+
             instance.Destroy ();
         }
+
+        private delegate void DebugReportCallbackDelegate (DebugReportFlags flags, DebugReportObjectType objectType, ulong obj, PointerSize location, int code, string layerPrefix, string message, IntPtr userData);
+        private delegate void CreateDebugReportDelegate (Instance instance, DebugReportCallbackCreateInfo* createInfo, AllocationCallbacks* allocator, DebugReportCallback* callback);
+        private delegate void DestroyDebugReportDelegate (Instance instance, DebugReportCallback callback, AllocationCallbacks* allocator);
     }
 }

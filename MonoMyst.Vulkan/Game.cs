@@ -2,13 +2,28 @@
 
 using MonoMyst.Vulkan.Utilities;
 
+using SharpVulkan;
+
+using Vk = SharpVulkan;
 using Glfw3 = MonoMyst.Glfw.Glfw;
 using Window = MonoMyst.Glfw.Glfw.Window;
+using System.Linq;
 
 namespace MonoMyst.Vulkan
 {
     public class Game : IDisposable
     {
+#if DEBUG
+        private const bool EnableDebug = true;
+#else
+        private const bool EnableDebug = false;
+#endif
+
+        private readonly string [] validationLayers = new string []
+        {
+            VulkanConstants.VK_STANDARD_VALIDATION
+        };
+
         private const int Width = 800;
         private const int Height = 600;
 
@@ -36,19 +51,32 @@ namespace MonoMyst.Vulkan
 
         private void InitVulkan ()
         {
-            instance = new VulkanInstance ("MonoMyst.Vulkan");
-            instance.PrintAvailableExtensions ();
-            instance.PrintGlfwExtensions ();
-            if (instance.CheckRequiredExtensionsPresent ())
-                Logger.WriteLine ("All required extensions are present.", ConsoleColor.Green);
+            if (EnableDebug && !CheckValidationLayerSupport ())
+                Logger.WriteLine ("Validation layers are requested but they're not available.", ConsoleColor.Red);
             else
-                Logger.WriteLine ("Not all required extensions are present.", ConsoleColor.Red);
+                Logger.WriteLine ("All requested validation layers are available.", ConsoleColor.Green);
+
+            instance = new VulkanInstance ("MonoMyst.Vulkan", EnableDebug, validationLayers);
         }
 
         private void Update ()
         {
             while (Glfw3.WindowShouldClose (window) == false)
                 Glfw3.PollEvents ();
+        }
+
+        private bool CheckValidationLayerSupport ()
+        {
+            LayerProperties [] layerProperties = Vk.Vulkan.InstanceLayerProperties;
+
+            foreach (string layerName in validationLayers)
+            {
+                string [] props = VulkanUtilities.LayerPropertiesToString (layerProperties);
+
+                if (props.Contains (layerName) == false) return false;
+            }
+
+            return true;
         }
 
         public void Dispose ()
