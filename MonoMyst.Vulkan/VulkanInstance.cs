@@ -15,7 +15,7 @@ namespace MonoMyst.Vulkan
 {
     public unsafe class VulkanInstance : IDisposable
     {
-        private readonly Instance instance;
+        private Instance instance;
 
         private readonly ExtensionProperties [] availableExtensions;
 
@@ -53,14 +53,16 @@ namespace MonoMyst.Vulkan
                 EnabledLayerCount = 0
             };
 
+            IntPtr [] validationLayersPtr = null;
             if (enableDebug)
             {
                 createInfo.EnabledLayerCount = (uint) validationLayers.Length;
 
-                IntPtr* validationLayersPointer = stackalloc IntPtr [validationLayers.Length];
+                validationLayersPtr = new IntPtr [validationLayers.Length];
                 for (int i = 0; i < validationLayers.Length; i++)
-                    validationLayersPointer [i] = Marshal.StringToHGlobalAnsi (validationLayers [i]);
+                    validationLayersPtr [i] = Marshal.StringToHGlobalAnsi (validationLayers [i]);
 
+                fixed (void* validationLayersPointer = &validationLayersPtr [0])
                 createInfo.EnabledLayerNames = new IntPtr (validationLayersPointer);
             }
             else
@@ -78,10 +80,38 @@ namespace MonoMyst.Vulkan
                 Marshal.FreeHGlobal (extensionsPointer [i]);
 
             if (enableDebug)
-                Marshal.FreeHGlobal (createInfo.EnabledLayerNames);
+                foreach (IntPtr i in validationLayersPtr)
+                Marshal.FreeHGlobal (i);
 
             if (enableDebug)
                 CreateDebugReport ();
+        }
+
+        public PhysicalDevice PickPhysicalDevice ()
+        {
+            PhysicalDevice result = PhysicalDevice.Null;
+
+            PhysicalDevice [] physicalDevices = instance.PhysicalDevices;
+
+            if (physicalDevices.Length == 0)
+                throw new Exception ("Failed to find GPUs with vulkan support.");
+
+            foreach (PhysicalDevice physicalDevice in physicalDevices)
+                if (IsPhysicalDeviceSuitable (physicalDevice))
+                {
+                    result = physicalDevice;
+                    break;
+                }
+
+            if (result == PhysicalDevice.Null)
+                throw new Exception ("Failed to find a suitable GPU.");
+
+            return result;
+        }
+
+        public bool IsPhysicalDeviceSuitable (PhysicalDevice physicalDevice)
+        {
+            return true;
         }
 
         private void CreateDebugReport ()

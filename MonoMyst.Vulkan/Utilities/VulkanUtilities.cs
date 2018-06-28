@@ -51,5 +51,11 @@ namespace MonoMyst.Vulkan.Utilities
 
             return result;
         }
+
+        public static string ValueBytesToString (byte value0)
+        {
+            void* pointer = &value0;
+            return Marshal.PtrToStringAnsi (new IntPtr (pointer));
+        }
     }
 }
