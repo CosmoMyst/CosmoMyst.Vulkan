@@ -31,6 +31,7 @@ namespace MonoMyst.Vulkan
 
         private VulkanInstance instance;
         private Device device;
+        private Presenter presenter;
 
         public void Run ()
         {
@@ -58,7 +59,8 @@ namespace MonoMyst.Vulkan
                 Logger.WriteLine ("All requested validation layers are available.", ConsoleColor.Green);
 
             instance = new VulkanInstance ("MonoMyst.Vulkan", EnableDebug);
-            device = instance.CreateDevice ();
+            presenter = instance.CreatePresenter (window);
+            device = instance.CreateDevice (presenter.Surface);
         }
 
         private void Update ()
@@ -81,8 +83,14 @@ namespace MonoMyst.Vulkan
             return true;
         }
 
-        public void Dispose ()
+        public unsafe void Dispose ()
         {
+            device.Dispose ();
+
+            presenter.Dispose ();
+
+            instance.Dispose ();
+
             Glfw3.DestroyWindow (window);
 
             Glfw3.Terminate ();

@@ -22,7 +22,7 @@ namespace MonoMyst.Glfw
         /// to the <c>Contents/Resources</c> subdirectory of the application's bundle, if present.
         /// </remarks>
         /// <seealso cref="Terminate"/>
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwInit"), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwInit")]
         [return: MarshalAs(UnmanagedType.Bool)]
         public static extern bool Init();
 
@@ -39,7 +39,7 @@ namespace MonoMyst.Glfw
         /// This function may be called before <see cref="Init"/>.
         /// </remarks>
         /// <seealso cref="Init"/>
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwTerminate"), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwTerminate")]
         public static extern void Terminate();
 
         /// <summary>
@@ -54,7 +54,7 @@ namespace MonoMyst.Glfw
         /// This function may be called before <see cref="Init"/>.
         /// </remarks>
         /// <seealso cref="GetVersionString"/>
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwGetVersion"), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwGetVersion")]
         public static extern void GetVersion(out int major, out int minor, out int rev);
 
         /// <summary>
@@ -73,7 +73,7 @@ namespace MonoMyst.Glfw
         /// <seealso cref="GetVersion(out int, out int, out int)"/>
         public static unsafe string GetVersionString() => FromUTF8(glfwGetVersionString());
 
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl)]
         static extern IntPtr glfwGetVersionString();
 
         /// <summary>
@@ -95,7 +95,7 @@ namespace MonoMyst.Glfw
         /// </remarks>
         public static void SetErrorCallback(ErrorFunc callback) => glfwSetErrorCallback(Marshal.GetFunctionPointerForDelegate(callback));
 
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl)]
         static extern IntPtr glfwSetErrorCallback(IntPtr callback);
 
         /// <summary>
@@ -126,7 +126,7 @@ namespace MonoMyst.Glfw
             return monitors;
         }
 
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl)]
         static extern unsafe IntPtr glfwGetMonitors(int* count);
 
         /// <summary>
@@ -139,7 +139,7 @@ namespace MonoMyst.Glfw
         /// The primary monitor is always first in the array returned by <see cref="GetMonitors"/>.
         /// </remarks>
         /// <seealso cref="GetMonitors"/>
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwGetPrimaryMonitor"), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwGetPrimaryMonitor")]
         [return: MarshalAs(UnmanagedType.Struct)]
         public static extern Monitor GetPrimaryMonitor();
 
@@ -157,7 +157,7 @@ namespace MonoMyst.Glfw
             xpos = xx; ypos = yy;
         }
 
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl)]
         static extern unsafe void glfwGetMonitorPos(IntPtr monitor, int* xpos, int* ypos);
 
         /// <summary>
@@ -183,7 +183,7 @@ namespace MonoMyst.Glfw
             widthMM = ww; heightMM = hh;
         }
 
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl)]
         static extern unsafe void glfwGetMonitorPhysicalSize(IntPtr monitor, int* widthMM, int* heightMM);
 
         /// <summary>
@@ -196,7 +196,7 @@ namespace MonoMyst.Glfw
         /// occurred.</returns>
         public static unsafe string GetMonitorName(Monitor monitor) => FromUTF8(glfwGetMonitorName(monitor.Ptr));
 
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl)]
         static extern IntPtr glfwGetMonitorName(IntPtr monitor);
 
         /// <summary>
@@ -207,7 +207,7 @@ namespace MonoMyst.Glfw
         /// callback.</param>
         public static void SetMonitorCallback(MonitorFunc callback) => glfwSetMonitorCallback(Marshal.GetFunctionPointerForDelegate(callback));
 
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl)]
         static extern IntPtr glfwSetMonitorCallback(IntPtr callback);
 
         /// <summary>
@@ -234,7 +234,7 @@ namespace MonoMyst.Glfw
             return result;
         }
 
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl)]
         static extern unsafe VideoMode* glfwGetVideoModes(IntPtr monitor, int* count);
 
         /// <summary>
@@ -251,7 +251,7 @@ namespace MonoMyst.Glfw
             return (VideoMode)Marshal.PtrToStructure(ptr, typeof(VideoMode));
         }
 
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl)]
         static extern IntPtr glfwGetVideoMode(IntPtr monitor);
 
         /// <summary>
@@ -263,7 +263,7 @@ namespace MonoMyst.Glfw
         /// <param name="gamma">The desired exponent.</param>
         public static void SetGamma(Monitor monitor, float gamma) => glfwSetGamma(monitor.Ptr, gamma);
 
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl)]
         static extern void glfwSetGamma(IntPtr monitor, float gamma);
 
         /// <summary>
@@ -292,7 +292,7 @@ namespace MonoMyst.Glfw
             return ramp;
         }
 
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl)]
         static extern unsafe InternalGammaRamp* glfwGetGammaRamp(IntPtr monitor);
 
         /// <summary>
@@ -322,7 +322,7 @@ namespace MonoMyst.Glfw
             }
         }
 
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl)]
         static extern void glfwSetGammaRamp(IntPtr monitor, InternalGammaRamp ramp);
 
         /// <summary>
@@ -331,7 +331,7 @@ namespace MonoMyst.Glfw
         /// <seealso cref="WindowHint(Hint, bool)"/>
         /// <seealso cref="WindowHint(Hint, Enum)"/>
         /// <seealso cref="WindowHint(Hint, int)"/>
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwDefaultWindowHints"), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwDefaultWindowHints")]
         public static extern void DefaultWindowHints();
 
         /// <summary>
@@ -382,7 +382,7 @@ namespace MonoMyst.Glfw
         /// <seealso cref="DefaultWindowHints"/>
         public static void WindowHint(Hint hint, Enum value) => glfwWindowHint((int)hint, Convert.ToInt32(value));
 
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl)]
         static extern void glfwWindowHint(int target, int hint);
 
         /// <summary>
@@ -464,7 +464,7 @@ namespace MonoMyst.Glfw
                 share.HasValue ? share.Value.Ptr : IntPtr.Zero
                );
 
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl)]
         [return: MarshalAs(UnmanagedType.Struct)]
         static extern Window glfwCreateWindow(int width, int height, IntPtr title, IntPtr monitor, IntPtr share);
 
@@ -477,7 +477,7 @@ namespace MonoMyst.Glfw
         /// <param name="window">The window to destroy.</param>
         /// <seealso cref="CreateWindow(int, int, string)"/>
         /// <seealso cref="CreateWindow(int, int, string, Monitor, Window)"/>
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwDestroyWindow"), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwDestroyWindow")]
         public static extern void DestroyWindow([MarshalAs(UnmanagedType.Struct)] Window window);
 
         /// <summary>
@@ -485,7 +485,7 @@ namespace MonoMyst.Glfw
         /// </summary>
         /// <param name="window">The window to query.</param>
         /// <returns>The value of the close flag.</returns>
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwWindowShouldClose"), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwWindowShouldClose")]
         [return: MarshalAs(UnmanagedType.Bool)]
         public static extern bool WindowShouldClose([MarshalAs(UnmanagedType.Struct)] Window window);
 
@@ -496,7 +496,7 @@ namespace MonoMyst.Glfw
         /// </summary>
         /// <param name="window">The window whose flag to change.</param>
         /// <param name="value">The new value.</param>
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwSetWindowShouldClose"), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwSetWindowShouldClose")]
         public static extern void SetWindowShouldClose([MarshalAs(UnmanagedType.Struct)] Window window, [MarshalAs(UnmanagedType.Bool)] bool value);
 
         /// <summary>
@@ -510,7 +510,7 @@ namespace MonoMyst.Glfw
         /// </remarks>
         public static void SetWindowTitle(Window window, string title) => glfwSetWindowTitle(window.Ptr, ToUTF8(title));
 
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl)]
         static extern void glfwSetWindowTitle(IntPtr window, IntPtr title);
 
         /// <summary>
@@ -581,7 +581,7 @@ namespace MonoMyst.Glfw
                 Marshal.FreeHGlobal(imgs[i].Pixels);
         }
 
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl)]
         static extern void glfwSetWindowIcon(IntPtr window, int count, IntPtr images);
 
         /// <summary>
@@ -601,7 +601,7 @@ namespace MonoMyst.Glfw
             xpos = xx; ypos = yy;
         }
 
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl)]
         static extern unsafe void glfwGetWindowPos(IntPtr window, int* xpos, int* ypos);
 
         /// <summary>
@@ -617,7 +617,7 @@ namespace MonoMyst.Glfw
         /// <param name="xpos">The x-coordinate of the upper-left corner of the client area.</param>
         /// <param name="ypos">The y-coordinate of the upper-left corner of the client area.</param>
         /// <seealso cref="GetWindowPos(Window, out int, out int)"/>
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwSetWindowPos"), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwSetWindowPos")]
         public static extern void SetWindowPos([MarshalAs(UnmanagedType.Struct)] Window window, int xpos, int ypos);
 
         /// <summary>
@@ -638,7 +638,7 @@ namespace MonoMyst.Glfw
             width = w; height = h;
         }
 
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl)]
         static extern unsafe void glfwGetWindowSize(IntPtr window, int* width, int* height);
 
         /// <summary>
@@ -663,7 +663,7 @@ namespace MonoMyst.Glfw
         /// If you set size limits and an aspect ratio that conflict, the results are undefined.
         /// </remarks>
         /// <seealso cref="SetWindowAspectRatio(Window, int, int)"/>
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwSetWindowSizeLimits"), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwSetWindowSizeLimits")]
         public static extern void SetWindowSizeLimits([MarshalAs(UnmanagedType.Struct)] Window window, int minwidth, int minheight, int maxwidth, int maxheight);
 
         /// <summary>
@@ -687,7 +687,7 @@ namespace MonoMyst.Glfw
         /// If you set size limits and an aspect ratio that conflict, the results are undefined.
         /// </remarks>
         /// <seealso cref="SetWindowSizeLimits(Window, int, int, int, int)"/>
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwSetWindowAspectRatio"), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwSetWindowAspectRatio")]
         public static extern void SetWindowAspectRatio([MarshalAs(UnmanagedType.Struct)] Window window, int numer, int denom);
 
         /// <summary>
@@ -709,7 +709,7 @@ namespace MonoMyst.Glfw
         /// area.</param>
         /// <seealso cref="GetWindowSize(Window, out int, out int)"/>
         /// <seealso cref="SetWindowMonitor(Window, Monitor, int, int, int, int, int)"/>
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwSetWindowSize"), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwSetWindowSize")]
         public static extern void SetWindowSize([MarshalAs(UnmanagedType.Struct)] Window window, int width, int height);
 
         /// <summary>
@@ -728,7 +728,7 @@ namespace MonoMyst.Glfw
             width = w; height = h;
         }
 
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl)]
         static extern unsafe void glfwGetFramebufferSize(IntPtr window, int* width, int* height);
 
         /// <summary>
@@ -756,7 +756,7 @@ namespace MonoMyst.Glfw
             left = l; top = t; right = r; bottom = b;
         }
 
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl)]
         static extern unsafe void glfwGetWindowFrameSize(IntPtr window, int* left, int* top, int* right, int* bottom);
 
         /// <summary>
@@ -768,7 +768,7 @@ namespace MonoMyst.Glfw
         /// <param name="window">The window to iconify.</param>
         /// <seealso cref="RestoreWindow(Window)"/>
         /// <seealso cref="MaximizeWindow(Window)"/>
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwIconifyWindow"), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwIconifyWindow")]
         public static extern void IconifyWindow([MarshalAs(UnmanagedType.Struct)] Window window);
 
         /// <summary>
@@ -781,7 +781,7 @@ namespace MonoMyst.Glfw
         /// <param name="window">The window to restore.</param>
         /// <seealso cref="IconifyWindow(Window)"/>
         /// <seealso cref="MaximizeWindow(Window)"/>
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwRestoreWindow"), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwRestoreWindow")]
         public static extern void RestoreWindow([MarshalAs(UnmanagedType.Struct)] Window window);
 
         /// <summary>
@@ -793,7 +793,7 @@ namespace MonoMyst.Glfw
         /// <param name="window">The window to maximize.</param>
         /// <seealso cref="IconifyWindow(Window)"/>
         /// <seealso cref="RestoreWindow(Window)"/>
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwMaximizeWindow"), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwMaximizeWindow")]
         public static extern void MaximizeWindow([MarshalAs(UnmanagedType.Struct)] Window window);
 
         /// <summary>
@@ -802,7 +802,7 @@ namespace MonoMyst.Glfw
         /// </summary>
         /// <param name="window">The window to make visible.</param>
         /// <seealso cref="HideWindow(Window)"/>
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwShowWindow"), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwShowWindow")]
         public static extern void ShowWindow([MarshalAs(UnmanagedType.Struct)] Window window);
 
         /// <summary>
@@ -811,7 +811,7 @@ namespace MonoMyst.Glfw
         /// </summary>
         /// <param name="window">The window to hide.</param>
         /// <seealso cref="ShowWindow(Window)"/>
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwHideWindow"), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwHideWindow")]
         public static extern void HideWindow([MarshalAs(UnmanagedType.Struct)] Window window);
 
         /// <summary>
@@ -824,7 +824,7 @@ namespace MonoMyst.Glfw
         /// disruptive.</para>
         /// </summary>
         /// <param name="window">The window to give input focus.</param>
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwFocusWindow"), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwFocusWindow")]
         public static extern void FocusWindow([MarshalAs(UnmanagedType.Struct)] Window window);
 
         /// <summary>
@@ -841,7 +841,7 @@ namespace MonoMyst.Glfw
             return new Monitor(ptr);
         }
 
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl)]
         static extern IntPtr glfwGetWindowMonitor(IntPtr window);
 
         /// <summary>
@@ -874,7 +874,7 @@ namespace MonoMyst.Glfw
         /// <see cref="DontCare"/>.</param>
         /// <seealso cref="GetWindowMonitor(Window)"/>
         /// <seealso cref="SetWindowSize(Window, int, int)"/>
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwSetWindowMonitor"), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwSetWindowMonitor")]
         public static extern void SetWindowMonitor([MarshalAs(UnmanagedType.Struct)] Window window, [MarshalAs(UnmanagedType.Struct)] Monitor monitor, int xpos, int ypos, int width, int height, int refreshRate);
 
         /// <summary>
@@ -889,7 +889,7 @@ namespace MonoMyst.Glfw
         /// </remarks>
         public static bool GetWindowAttrib(Window window, WindowAttrib attrib) => glfwGetWindowAttrib(window.Ptr, Convert.ToInt32(attrib)) != 0;
 
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl)]
         static extern int glfwGetWindowAttrib(IntPtr window, int attrib);
 
         /// <summary>
@@ -899,7 +899,7 @@ namespace MonoMyst.Glfw
         /// <param name="window">The window whose pointer to set.</param>
         /// <param name="ptr">The new value.</param>
         /// <seealso cref="GetWindowUserPointer(Window)"/>
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwSetWindowUserPointer"), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwSetWindowUserPointer")]
         public static extern void SetWindowUserPointer([MarshalAs(UnmanagedType.Struct)] Window window, IntPtr ptr);
 
         /// <summary>
@@ -909,7 +909,7 @@ namespace MonoMyst.Glfw
         /// <param name="window">The window whose pointer to return.</param>
         /// <returns>The user-defined pointer of the specified window.</returns>
         /// <seealso cref="SetWindowUserPointer(Window, IntPtr)"/>
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwGetWindowUserPointer"), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwGetWindowUserPointer")]
         public static extern IntPtr GetWindowUserPointer([MarshalAs(UnmanagedType.Struct)] Window window);
 
         /// <summary>
@@ -922,7 +922,7 @@ namespace MonoMyst.Glfw
         /// callback.</param>
         public static void SetWindowPosCallback(Window window, WindowPosFunc callback) => glfwSetWindowPosCallback(window.Ptr, Marshal.GetFunctionPointerForDelegate(callback));
 
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl)]
         static extern IntPtr glfwSetWindowPosCallback(IntPtr window, IntPtr callback);
 
         /// <summary>
@@ -935,7 +935,7 @@ namespace MonoMyst.Glfw
         /// callback.</param>
         public static void SetWindowSizeCallback(Window window, WindowSizeFunc callback) => glfwSetWindowSizeCallback(window.Ptr, Marshal.GetFunctionPointerForDelegate(callback));
 
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl)]
         static extern IntPtr glfwSetWindowSizeCallback(IntPtr window, IntPtr callback);
 
         /// <summary>
@@ -955,7 +955,7 @@ namespace MonoMyst.Glfw
         /// </remarks>
         public static void SetWindowCloseCallback(Window window, WindowCloseFunc callback) => glfwSetWindowCloseCallback(window.Ptr, Marshal.GetFunctionPointerForDelegate(callback));
 
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl)]
         static extern IntPtr glfwSetWindowCloseCallback(IntPtr window, IntPtr callback);
 
         /// <summary>
@@ -971,7 +971,7 @@ namespace MonoMyst.Glfw
         /// callback.</param>
         public static void SetWindowRefreshCallback(Window window, WindowRefreshFunc callback) => glfwSetWindowRefreshCallback(window.Ptr, Marshal.GetFunctionPointerForDelegate(callback));
 
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl)]
         static extern IntPtr glfwSetWindowRefreshCallback(IntPtr window, IntPtr callback);
 
         /// <summary>
@@ -987,7 +987,7 @@ namespace MonoMyst.Glfw
         /// callback.</param>
         public static void SetWindowFocusCallback(Window window, WindowFocusFunc callback) => glfwSetWindowFocusCallback(window.Ptr, Marshal.GetFunctionPointerForDelegate(callback));
 
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl)]
         static extern IntPtr glfwSetWindowFocusCallback(IntPtr window, IntPtr callback);
 
         /// <summary>
@@ -999,7 +999,7 @@ namespace MonoMyst.Glfw
         /// callback.</param>
         public static void SetWindowIconifyCallback(Window window, WindowIconifyFunc callback) => glfwSetWindowIconifyCallback(window.Ptr, Marshal.GetFunctionPointerForDelegate(callback));
 
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl)]
         static extern IntPtr glfwSetWindowIconifyCallback(IntPtr window, IntPtr callback);
 
         /// <summary>
@@ -1011,7 +1011,7 @@ namespace MonoMyst.Glfw
         /// callback.</param>
         public static void SetFramebufferSizeCallback(Window window, FramebufferSizeFunc callback) => glfwSetFramebufferSizeCallback(window.Ptr, Marshal.GetFunctionPointerForDelegate(callback));
 
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl)]
         static extern IntPtr glfwSetFramebufferSizeCallback(IntPtr window, IntPtr callback);
 
         /// <summary>
@@ -1029,7 +1029,7 @@ namespace MonoMyst.Glfw
         /// </summary>
         /// <seealso cref="WaitEvents"/>
         /// <seealso cref="WaitEventsTimeout(double)"/>
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwPollEvents"), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwPollEvents")]
         public static extern void PollEvents();
 
         /// <summary>
@@ -1053,7 +1053,7 @@ namespace MonoMyst.Glfw
         /// </summary>
         /// <seealso cref="PollEvents"/>
         /// <seealso cref="WaitEventsTimeout(double)"/>
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwWaitEvents"), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwWaitEvents")]
         public static extern void WaitEvents();
 
         /// <summary>
@@ -1079,7 +1079,7 @@ namespace MonoMyst.Glfw
         /// <param name="timeout">The maximum amount of time, in seconds, to wait.</param>
         /// <seealso cref="PollEvents"/>
         /// <seealso cref="WaitEvents"/>
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwWaitEventsTimeout"), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwWaitEventsTimeout")]
         public static extern void WaitEventsTimeout(double timeout);
 
         /// <summary>
@@ -1090,7 +1090,7 @@ namespace MonoMyst.Glfw
         /// threads in applications that do not create windows, use your threading library of
         /// choice.</para>
         /// </summary>
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwPostEmptyEvent"), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwPostEmptyEvent")]
         public static extern void PostEmptyEvent();
 
         /// <summary>
@@ -1101,7 +1101,7 @@ namespace MonoMyst.Glfw
         /// <returns>The value of an input option for the specified window.</returns>
         public static int GetInputMode(Window window, InputMode mode) => glfwGetInputMode(window.Ptr, Convert.ToInt32(mode));
 
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl)]
         static extern int glfwGetInputMode(IntPtr window, int mode);
 
         /// <summary>
@@ -1170,7 +1170,7 @@ namespace MonoMyst.Glfw
         /// <seealso cref="GetInputMode(Window, InputMode)"/>
         public static void SetInputMode(Window window, InputMode mode, bool value) => glfwSetInputMode(window.Ptr, Convert.ToInt32(mode), value ? 1 : 0);
 
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl)]
         static extern void glfwSetInputMode(IntPtr window, int mode, int value);
 
         /// <summary>
@@ -1211,7 +1211,7 @@ namespace MonoMyst.Glfw
         /// <returns>The localized name of the key, or <c>null</c>.</returns>
         public static unsafe string GetKeyName(KeyCode key, int scancode) => Marshal.PtrToStringAnsi(glfwGetKeyName(Convert.ToInt32(key), scancode));
 
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl)]
         static extern IntPtr glfwGetKeyName(int key, int scancode);
 
         /// <summary>
@@ -1234,7 +1234,7 @@ namespace MonoMyst.Glfw
         /// key for this function.</param>
         /// <returns>One of <see cref="InputState.Press"/> or
         /// <see cref="InputState.Release"/>.</returns>
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwGetKey"), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwGetKey")]
         [return: MarshalAs(UnmanagedType.Bool)]
         public static extern bool GetKey([MarshalAs(UnmanagedType.Struct)] Window window, int key);
 
@@ -1249,7 +1249,7 @@ namespace MonoMyst.Glfw
         /// <param name="window">The desired window.</param>
         /// <param name="button">The desired mouse button.</param>
         /// <returns><c>true</c> if the button was pressed, <c>false</c> otherwise.</returns>
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwGetMouseButton"), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwGetMouseButton")]
         [return: MarshalAs(UnmanagedType.Bool)]
         public static extern bool GetMouseButton([MarshalAs(UnmanagedType.Struct)] Window window, MouseButton button);
 
@@ -1276,7 +1276,7 @@ namespace MonoMyst.Glfw
             xpos = xx; ypos = yy;
         }
 
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl)]
         static extern unsafe void glfwGetCursorPos(IntPtr window, double* xpos, double* ypos);
 
         /// <summary>
@@ -1299,7 +1299,7 @@ namespace MonoMyst.Glfw
         /// <param name="ypos"> The desired y-coordinate, relative to the top edge of the client
         /// area.</param>
         /// <seealso cref="GetCursorPos(Window, out double, out double)"/>
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwSetCursorPos"), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwSetCursorPos")]
         public static extern void SetCursorPos([MarshalAs(UnmanagedType.Struct)] Window window, double xpos, double ypos);
 
         /// <summary>
@@ -1341,7 +1341,7 @@ namespace MonoMyst.Glfw
             return new Cursor(ptr);
         }
 
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl)]
         static extern IntPtr glfwCreateCursor(IntPtr image, int xhot, int yhot);
 
         /// <summary>
@@ -1350,7 +1350,7 @@ namespace MonoMyst.Glfw
         /// </summary>
         /// <param name="cursor">One of the standard shapes.</param>
         /// <returns>A new cursor ready to use.</returns>
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwCreateStandardCursor"), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwCreateStandardCursor")]
         [return: MarshalAs(UnmanagedType.Struct)]
         public static extern Cursor CreateStandardCursor(CursorType cursor);
 
@@ -1361,7 +1361,7 @@ namespace MonoMyst.Glfw
         /// </summary>
         /// <param name="cursor">The cursor object to destroy.</param>
         /// <seealso cref="CreateCursor(Image, int, int)"/>
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwDestroyCursor"), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwDestroyCursor")]
         public static extern void DestroyCursor([MarshalAs(UnmanagedType.Struct)] Cursor cursor);
 
         /// <summary>
@@ -1373,7 +1373,7 @@ namespace MonoMyst.Glfw
         /// </summary>
         /// <param name="window">The window to set the cursor for.</param>
         /// <param name="cursor">The cursor to set.</param>
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwSetCursor"), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwSetCursor")]
         public static extern void SetCursor([MarshalAs(UnmanagedType.Struct)] Window window, [MarshalAs(UnmanagedType.Struct)] Cursor cursor);
 
         /// <summary>
@@ -1399,7 +1399,7 @@ namespace MonoMyst.Glfw
         /// callback.</param>
         public static void SetKeyCallback(Window window, KeyFunc callback) => glfwSetKeyCallback(window.Ptr, Marshal.GetFunctionPointerForDelegate(callback));
 
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl)]
         static extern IntPtr glfwSetKeyCallback(IntPtr window, IntPtr callback);
 
         /// <summary>
@@ -1422,7 +1422,7 @@ namespace MonoMyst.Glfw
         /// callback.</param>
         public static void SetCharCallback(Window window, CharFunc callback) => glfwSetCharCallback(window.Ptr, Marshal.GetFunctionPointerForDelegate(callback));
 
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl)]
         static extern IntPtr glfwSetCharCallback(IntPtr window, IntPtr callback);
 
         /// <summary>
@@ -1442,7 +1442,7 @@ namespace MonoMyst.Glfw
         /// callback.</param>
         public static void SetCharModsCallback(Window window, CharModsFunc callback) => glfwSetCharModsCallback(window.Ptr, Marshal.GetFunctionPointerForDelegate(callback));
 
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl)]
         static extern IntPtr glfwSetCharModsCallback(IntPtr window, IntPtr callback);
 
         /// <summary>
@@ -1459,7 +1459,7 @@ namespace MonoMyst.Glfw
         /// callback.</param>
         public static void SetMouseButtonCallback(Window window, MouseButtonFunc callback) => glfwSetMouseButtonCallback(window.Ptr, Marshal.GetFunctionPointerForDelegate(callback));
 
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl)]
         static extern IntPtr glfwSetMouseButtonCallback(IntPtr window, IntPtr callback);
 
         /// <summary>
@@ -1472,7 +1472,7 @@ namespace MonoMyst.Glfw
         /// callback.</param>
         public static void SetCursorPosCallback(Window window, CursorPosFunc callback) => glfwSetCursorPosCallback(window.Ptr, Marshal.GetFunctionPointerForDelegate(callback));
 
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl)]
         static extern IntPtr glfwSetCursorPosCallback(IntPtr window, IntPtr callback);
 
         /// <summary>
@@ -1484,7 +1484,7 @@ namespace MonoMyst.Glfw
         /// callback.</param>
         public static void SetCursorEnterCallback(Window window, CursorEnterFunc callback) => glfwSetCursorEnterCallback(window.Ptr, Marshal.GetFunctionPointerForDelegate(callback));
 
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl)]
         static extern IntPtr glfwSetCursorEnterCallback(IntPtr window, IntPtr callback);
 
         /// <summary>
@@ -1499,7 +1499,7 @@ namespace MonoMyst.Glfw
         /// callback.</param>
         public static void SetScrollCallback(Window window, CursorPosFunc callback) => glfwSetScrollCallback(window.Ptr, Marshal.GetFunctionPointerForDelegate(callback));
 
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl)]
         static extern IntPtr glfwSetScrollCallback(IntPtr window, IntPtr callback);
 
         /// <summary>
@@ -1511,7 +1511,7 @@ namespace MonoMyst.Glfw
         /// callback.</param>
         public static void SetDropCallback(Window window, DropFunc callback) => glfwSetDropCallback(window.Ptr, Marshal.GetFunctionPointerForDelegate(callback));
 
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl)]
         static extern IntPtr glfwSetDropCallback(IntPtr window, IntPtr callback);
 
         /// <summary>
@@ -1519,7 +1519,7 @@ namespace MonoMyst.Glfw
         /// </summary>
         /// <param name="joy">The joystick to query.</param>
         /// <returns><c>true</c> if the joystick is present, or <c>false</c> otherwise.</returns>
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwJoystickPresent"), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwJoystickPresent")]
         [return: MarshalAs(UnmanagedType.Bool)]
         public static extern bool JoystickPresent(Joystick joy);
 
@@ -1546,7 +1546,7 @@ namespace MonoMyst.Glfw
             return axes;
         }
 
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl)]
         static extern unsafe IntPtr glfwGetJoystickAxes(int joy, int* count);
 
         /// <summary>
@@ -1576,7 +1576,7 @@ namespace MonoMyst.Glfw
             return buttons;
         }
 
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl)]
         static extern unsafe IntPtr glfwGetJoystickButtons(int joy, int* count);
 
         /// <summary>
@@ -1591,7 +1591,7 @@ namespace MonoMyst.Glfw
         /// present.</returns>
         public static string GetJoystickName(Joystick joy) => FromUTF8(glfwGetJoystickName((int)joy));
 
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl)]
         static extern unsafe IntPtr glfwGetJoystickName(int joy);
 
         /// <summary>
@@ -1603,7 +1603,7 @@ namespace MonoMyst.Glfw
         /// callback.</param>
         public static void SetJoystickCallback(JoystickFunc callback) => glfwSetJoystickCallback(Marshal.GetFunctionPointerForDelegate(callback));
 
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl)]
         static extern IntPtr glfwSetJoystickCallback(IntPtr callback);
 
         /// <summary>
@@ -1614,7 +1614,7 @@ namespace MonoMyst.Glfw
         /// <seealso cref="GetClipboardString(Window)"/>
         public static void SetClipboardString(Window window, string value) => glfwSetClipboardString(window.Ptr, ToUTF8(value));
 
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl)]
         static extern void glfwSetClipboardString(IntPtr window, IntPtr value);
 
         /// <summary>
@@ -1629,7 +1629,7 @@ namespace MonoMyst.Glfw
         /// <seealso cref="SetClipboardString(Window, string)"/>
         public static string GetClipboardString(Window window) => FromUTF8(glfwGetClipboardString(window.Ptr));
 
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl)]
         static extern unsafe IntPtr glfwGetClipboardString(IntPtr window);
 
         /// <summary>
@@ -1641,7 +1641,7 @@ namespace MonoMyst.Glfw
         /// supported platform.</para>
         /// </summary>
         /// <returns>The current value, in seconds, or zero if an error occurred.</returns>
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwGetTime"), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwGetTime")]
         public static extern double GetTime();
 
         /// <summary>
@@ -1655,7 +1655,7 @@ namespace MonoMyst.Glfw
         /// to implementations storing nanoseconds in 64 bits. The limit may be increased in the
         /// future.
         /// </remarks>
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwSetTime"), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwSetTime")]
         public static extern void SetTime(double time);
 
         /// <summary>
@@ -1664,7 +1664,7 @@ namespace MonoMyst.Glfw
         /// </summary>
         /// <returns>The value of the timer, or zero if an error occurred.</returns>
         /// <seealso cref="GetTimerFrequency"/>
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwGetTimerValue"), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwGetTimerValue")]
         public static extern ulong GetTimerValue();
 
         /// <summary>
@@ -1672,7 +1672,7 @@ namespace MonoMyst.Glfw
         /// </summary>
         /// <returns>The frequency of the timer, in Hz, or zero if an error occurred</returns>
         /// <seealso cref="GetTimerValue"/>
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwGetTimerFrequency"), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwGetTimerFrequency")]
         public static extern ulong GetTimerFrequency();
 
         /// <summary>
@@ -1689,7 +1689,7 @@ namespace MonoMyst.Glfw
         /// <param name="window">The window whose context to make current, or
         /// <see cref="Window.None"/> to detach the current context.</param>
         /// <seealso cref="GetCurrentContext"/>
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwMakeContextCurrent"), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwMakeContextCurrent")]
         public static extern void MakeContextCurrent([MarshalAs(UnmanagedType.Struct)] Window window);
 
         /// <summary>
@@ -1699,7 +1699,7 @@ namespace MonoMyst.Glfw
         /// <returns>The window whose context is current, or <see cref="Window.None"/> if no
         /// window's context is current.</returns>
         /// <seealso cref="MakeContextCurrent(Window)"/>
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwGetCurrentContext"), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwGetCurrentContext")]
         [return: MarshalAs(UnmanagedType.Struct)]
         public static extern Window GetCurrentContext();
 
@@ -1715,7 +1715,7 @@ namespace MonoMyst.Glfw
         /// <strong>EGL:</strong> The context of the specified window must be current on the
         /// calling thread.
         /// </remarks>
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwSwapBuffers"), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwSwapBuffers")]
         public static extern void SwapBuffers([MarshalAs(UnmanagedType.Struct)] Window window);
 
         /// <summary>
@@ -1745,7 +1745,7 @@ namespace MonoMyst.Glfw
         /// driver.</para>
         /// </remarks>
         /// <seealso cref="SwapBuffers(Window)"/>
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwSwapInterval"), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwSwapInterval")]
         public static extern void SwapInterval(int interval);
         
         /// <summary>
@@ -1762,7 +1762,7 @@ namespace MonoMyst.Glfw
         /// <param name="extension">The ASCII encoded name of the extension.</param>
         /// <returns><c>true</c> if the extension is available, or <c>false</c> otherwise.</returns>
         /// <seealso cref="GetProcAddress(string)"/>
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi, EntryPoint = "glfwExtensionSupported"), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi, EntryPoint = "glfwExtensionSupported")]
         [return: MarshalAs(UnmanagedType.Bool)]
         public static extern bool ExtensionSupported(string extension);
 
@@ -1782,7 +1782,7 @@ namespace MonoMyst.Glfw
         /// first.</para>
         /// </remarks>
         /// <seealso cref="ExtensionSupported(string)"/>
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi, EntryPoint = "glfwGetProcAddress"), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi, EntryPoint = "glfwGetProcAddress")]
         public static extern IntPtr GetProcAddress(string procname);
 
         /// <summary>
@@ -1790,11 +1790,11 @@ namespace MonoMyst.Glfw
         /// by <see cref="Init"/>.
         /// </summary>
         /// <returns><c>true</c> if Vulkan is available, or <c>false</c> otherwise.</returns>
-        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwVulkanSupported"), SuppressUnmanagedCodeSecurity]
+        [DllImport(kLibrary, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwVulkanSupported")]
         [return: MarshalAs(UnmanagedType.Bool)]
         public static extern bool VulkanSupported();
 
-        [DllImport (kLibrary, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwGetRequiredInstanceExtensions"), SuppressUnmanagedCodeSecurity]
+        [DllImport (kLibrary, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwGetRequiredInstanceExtensions")]
         private unsafe static extern byte** glfwGetRequiredInstanceExtensions (out int count);
 
         public unsafe static string [] GetRequiredInstanceExtensions ()
@@ -1807,6 +1807,18 @@ namespace MonoMyst.Glfw
                 result [i] = Marshal.PtrToStringAnsi (new IntPtr (namePointer [i]));
 
             return result;
+        }
+
+        [DllImport (kLibrary, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwCreateWindowSurface")]
+        private unsafe static extern SharpVulkan.Result glfwCreateWindowSurface (SharpVulkan.Instance instance, Window window, SharpVulkan.AllocationCallbacks* pAllocator, SharpVulkan.Surface* surface);
+
+        public unsafe static SharpVulkan.Surface CreateWindowSurface (SharpVulkan.Instance instance, Window window, SharpVulkan.AllocationCallbacks* pAllocator = null)
+        {
+            SharpVulkan.Surface surface;
+
+            glfwCreateWindowSurface (instance, window, null, &surface);
+
+            return surface;
         }
     }
 }

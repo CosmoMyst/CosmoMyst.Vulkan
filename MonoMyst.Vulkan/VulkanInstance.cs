@@ -11,6 +11,8 @@ using Version = SharpVulkan.Version;
 
 using Glfw3 = MonoMyst.Glfw.Glfw;
 
+using static MonoMyst.Glfw.Glfw;
+
 namespace MonoMyst.Vulkan
 {
     public unsafe class VulkanInstance : IDisposable
@@ -87,10 +89,9 @@ namespace MonoMyst.Vulkan
                 CreateDebugReport ();
         }
 
-        public Device CreateDevice ()
-        {
-            return new Device (instance, enableDebug);
-        }
+        public Device CreateDevice (Surface surface) => new Device (instance, surface, enableDebug);
+
+        public Presenter CreatePresenter (Window window) => new Presenter (instance, window);
 
         private void CreateDebugReport ()
         {

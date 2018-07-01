@@ -1,7 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 
 using SharpVulkan;
+
+using static MonoMyst.Glfw.Glfw;
 
 using Vk = SharpVulkan;
 
@@ -10,17 +13,20 @@ namespace MonoMyst.Vulkan
     public unsafe class Device : IDisposable
     {
         private PhysicalDevice physicalDevice;
-        private Vk.Device logicalDevice;
+        public Vk.Device logicalDevice;
 
         private Queue graphicsQueue;
+        private Queue presentQueue;
 
         private Instance instance;
+        private Surface surface;
 
         private readonly bool enableDebug;
 
-        public Device (Instance instance, bool enableDebug)
+        public Device (Instance instance, Surface surface, bool enableDebug)
         {
             this.instance = instance;
+            this.surface = surface;
             this.enableDebug = enableDebug;
 
             PickPhysicalDevice ();
@@ -56,24 +62,39 @@ namespace MonoMyst.Vulkan
         {
             QueueFamilyIndices indices = FindQueueFamilies (physicalDevice);
 
-            float* queuePriorities = stackalloc float [1];
-            queuePriorities [0] = 1.0f;
-
-            DeviceQueueCreateInfo queueCreateInfo = new DeviceQueueCreateInfo
+            SortedSet<int> uniqueQueueFamilies = new SortedSet<int> ()
             {
-                StructureType = StructureType.DeviceQueueCreateInfo,
-                QueueFamilyIndex = (uint) indices.GraphicsFamily,
-                QueueCount = 1,
-                QueuePriorities = (IntPtr) queuePriorities,
+                indices.GraphicsFamily,
+                indices.PresentFamily
             };
+
+            DeviceQueueCreateInfo* queueCreateInfos = stackalloc DeviceQueueCreateInfo [uniqueQueueFamilies.Count];
+
+            float queuePriorities = 1.0f;
+
+            {
+                int i = 0;
+                foreach (int queueFamily in uniqueQueueFamilies)
+                {
+                    queueCreateInfos [i] = new DeviceQueueCreateInfo
+                    {
+                        StructureType = StructureType.DeviceQueueCreateInfo,
+                        QueueFamilyIndex = (uint) queueFamily,
+                        QueueCount = 1,
+                        QueuePriorities = new IntPtr (&queuePriorities)
+                    };
+
+                    i++;
+                }
+            }
 
             PhysicalDeviceFeatures deviceFeatures = new PhysicalDeviceFeatures ();
 
             DeviceCreateInfo createInfo = new DeviceCreateInfo
             {
                 StructureType = StructureType.DeviceCreateInfo,
-                QueueCreateInfoCount = 1,
-                QueueCreateInfos = new IntPtr (&queueCreateInfo),
+                QueueCreateInfoCount = (uint) uniqueQueueFamilies.Count,
+                QueueCreateInfos = (IntPtr) queueCreateInfos,
                 EnabledFeatures = new IntPtr (&deviceFeatures),
                 EnabledExtensionCount = 0
             };
@@ -98,6 +119,7 @@ namespace MonoMyst.Vulkan
             logicalDevice = physicalDevice.CreateDevice (ref createInfo);
 
             graphicsQueue = logicalDevice.GetQueue ((uint) indices.GraphicsFamily, 0);
+            presentQueue = logicalDevice.GetQueue ((uint) indices.PresentFamily, 0);
 
             if (enableDebug)
                 foreach (IntPtr i in validationLayersPtr)
@@ -115,6 +137,11 @@ namespace MonoMyst.Vulkan
                 if (properties [i].QueueCount > 0 && (properties [i].QueueFlags & QueueFlags.Graphics) != 0)
                     indices.GraphicsFamily = i;
 
+                bool presentSupport = device.GetSurfaceSupport ((uint) i, surface);
+
+                if (properties [i].QueueCount > 0 && presentSupport)
+                    indices.PresentFamily = i;
+
                 if (indices.IsComplete ())
                     break;
             }
@@ -122,9 +149,6 @@ namespace MonoMyst.Vulkan
             return indices;
         }
 
-        public void Dispose ()
-        {
-            logicalDevice.Destroy ();
-        }
+        public void Dispose () => logicalDevice.Destroy ();
     }
 }
