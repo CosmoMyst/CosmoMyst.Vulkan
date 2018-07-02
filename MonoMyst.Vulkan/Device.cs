@@ -4,9 +4,12 @@ using System.Runtime.InteropServices;
 
 using SharpVulkan;
 
+using MonoMyst.Vulkan.Utilities;
+
 using static MonoMyst.Glfw.Glfw;
 
 using Vk = SharpVulkan;
+using System.Linq;
 
 namespace MonoMyst.Vulkan
 {
@@ -22,6 +25,11 @@ namespace MonoMyst.Vulkan
         private Surface surface;
 
         private readonly bool enableDebug;
+
+        private readonly string [] deviceExtensions = new string []
+        {
+            VulkanConstants.VK_SWAPCHAIN_EXTENSION_NAME
+        };
 
         public Device (Instance instance, Surface surface, bool enableDebug)
         {
@@ -55,7 +63,22 @@ namespace MonoMyst.Vulkan
         {
             QueueFamilyIndices indices = FindQueueFamilies (device);
 
-            return indices.IsComplete ();
+            return indices.IsComplete () && CheckPhysicalDeviceExtensionsSupport (device);
+        }
+
+        private bool CheckPhysicalDeviceExtensionsSupport (PhysicalDevice device)
+        {
+            SortedSet<string> requiredExtensions = new SortedSet<string> ();
+
+            foreach (string ext in deviceExtensions)
+                requiredExtensions.Add (ext);
+
+            ExtensionProperties [] properties = device.GetDeviceExtensionProperties ();
+
+            foreach (ExtensionProperties prop in properties)
+                requiredExtensions.Remove (VulkanUtilities.ExtensionPropertiesToString (prop));
+
+            return requiredExtensions.Count == 0;
         }
 
         private void CreateLogicalDevice ()
@@ -90,14 +113,21 @@ namespace MonoMyst.Vulkan
 
             PhysicalDeviceFeatures deviceFeatures = new PhysicalDeviceFeatures ();
 
+            IntPtr [] deviceExtensionNamesPtr = new IntPtr [deviceExtensions.Length];
+            for (int i = 0; i < deviceExtensions.Length; i++)
+                deviceExtensionNamesPtr [i] = Marshal.StringToHGlobalAnsi (deviceExtensions [i]);
+
             DeviceCreateInfo createInfo = new DeviceCreateInfo
             {
                 StructureType = StructureType.DeviceCreateInfo,
                 QueueCreateInfoCount = (uint) uniqueQueueFamilies.Count,
                 QueueCreateInfos = (IntPtr) queueCreateInfos,
                 EnabledFeatures = new IntPtr (&deviceFeatures),
-                EnabledExtensionCount = 0
+                EnabledExtensionCount = (uint) deviceExtensions.Length,
             };
+
+            fixed (void* extNamesPointer = &deviceExtensionNamesPtr [0])
+                createInfo.EnabledExtensionNames = new IntPtr (extNamesPointer);
 
             IntPtr [] validationLayersPtr = null;
             if (enableDebug)
@@ -124,6 +154,9 @@ namespace MonoMyst.Vulkan
             if (enableDebug)
                 foreach (IntPtr i in validationLayersPtr)
                     Marshal.FreeHGlobal (i);
+
+            foreach (IntPtr i in deviceExtensionNamesPtr)
+                Marshal.FreeHGlobal (i);
         }
 
         private QueueFamilyIndices FindQueueFamilies (PhysicalDevice device)
