@@ -1,0 +1,16 @@
+{
+	"name": "monomyst-vulkan",
+	"authors": [
+		"CodeMyst"
+	],
+	"dependencies": {
+		"derelict-vulkan": "~>0.0.13",
+		"derelict-glfw3": "~>4.0.0-beta"
+	},
+	"subConfigurations": {
+		"derelict-glfw3": "derelict-glfw3-dynamic"
+	},
+	"description": "Vulkan renderer written in D for the MonoMyst game engine.",
+	"copyright": "Copyright © 2018, CodeMyst",
+	"license": "Mozilla Public License Version 2.0"
+}

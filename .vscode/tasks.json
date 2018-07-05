@@ -1,15 +1,21 @@
 {
     "version": "2.0.0",
-    "tasks": [
+    "tasks":
+    [
         {
             "label": "build",
-            "command": "dotnet",
+            "type": "shell",
+            "command": "dub build",
+            "group":
+            {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "run",
             "type": "process",
-            "args": [
-                "build",
-                "${workspaceFolder}/MonoMyst.Vulkan/MonoMyst.Vulkan.csproj"
-            ],
-            "problemMatcher": "$msCompile"
+            "command": "./monomyst-vulkan"
         }
     ]
 }
