@@ -1,6 +1,7 @@
 module monomyst.vulkan;
 
 import erupted;
+import erupted.vulkan_lib_loader;
 import derelict.glfw3;
 import std.file : getcwd;
 import std.string;
@@ -23,7 +24,9 @@ void run ()
 
 private void initWindow ()
 {
-	DerelictGLFW3.load (format ("%s/libs/glfw3.dll", getcwd));
+	DerelictGLFW3.load ();
+
+    DerelictGLFW3_loadVulkan ();
 
     glfwInit ();
 
@@ -40,16 +43,7 @@ private void enforceVk (VkResult result)
 
 private void initVulkan ()
 {
-    DerelictGLFW3_loadVulkan ();
-
-    if (glfwVulkanSupported () == false)
-    {
-        writeln ("vulkan not supported");
-        assert (0);
-    }
-
-    loadGlobalLevelFunctions (cast (typeof (vkGetInstanceProcAddr))
-                              glfwGetInstanceProcAddress (null, "vkGetInstanceProcAddr"));
+    loadGlobalLevelFunctions ();
 
     VkApplicationInfo appInfo = {
         pApplicationName: "MonoMyst.Vulkan",
