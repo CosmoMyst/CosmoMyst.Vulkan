@@ -1,10 +1,8 @@
 {
 	"fileVersion": 1,
 	"versions": {
-		"d-vulkan": "0.3.1",
 		"derelict-glfw3": "4.0.0-beta.1",
-		"derelict-sdl2": "3.0.0-beta.7",
-		"derelict-util": "2.0.6",
-		"derelict-vulkan": "0.0.13"
+		"derelict-util": "3.0.0-beta.2",
+		"erupted": "2.0.4+v1.1.76"
 	}
 }
