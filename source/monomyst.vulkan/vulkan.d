@@ -24,6 +24,7 @@ private const string [1] validationLayers = ["VK_LAYER_LUNARG_standard_validatio
 
 private GLFWwindow* window;
 private VkInstance instance;
+private VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
 
 private VkDebugReportCallbackEXT debugCallback;
 
@@ -35,7 +36,7 @@ void run () // stfu
     cleanup ();
 }
 
-extern (Windows) static VkBool32 vulkanDebugCallback (VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType, ulong obj, //stfu
+extern (System) static VkBool32 vulkanDebugCallback (VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType, ulong obj, //stfu
 		                                              size_t location, int code, const (char*) layerPrefix, // stfu
                                                       const (char*) msg, void* userData) nothrow
 {
@@ -79,6 +80,64 @@ private void initVulkan ()
     createInstance ();
 
     setupDebugCallback ();
+
+    pickPhysicalDevice ();
+}
+
+private void pickPhysicalDevice ()
+{
+    uint deviceCount;
+    vkEnumeratePhysicalDevices (instance, &deviceCount, null);
+
+    if (deviceCount == 0)
+        throw new Exception ("Physical device count is 0.");
+
+    VkPhysicalDevice [] devices;
+    devices.length = deviceCount;
+
+    vkEnumeratePhysicalDevices (instance, &deviceCount, devices.ptr);
+
+    foreach (device; devices)
+    {
+        if (isDeviceSuitable (device))
+        {
+            physicalDevice = device;
+            break;
+        }
+    }
+
+    if (physicalDevice == VK_NULL_HANDLE)
+        throw new Exception ("Couldn't find a suitable physical device");
+}
+
+private bool isDeviceSuitable (VkPhysicalDevice device)
+{
+    QueueFamilyIndices indices = findQueueFamilies (device);
+
+    return indices.isComplete ();
+}
+
+private QueueFamilyIndices findQueueFamilies (VkPhysicalDevice device)
+{
+    QueueFamilyIndices indices;
+
+    uint queueFamilyCount;
+    vkGetPhysicalDeviceQueueFamilyProperties (device, &queueFamilyCount, null);
+
+    VkQueueFamilyProperties [] queueFamilies;
+    queueFamilies.length = queueFamilyCount;
+    vkGetPhysicalDeviceQueueFamilyProperties (device, &queueFamilyCount, queueFamilies.ptr);
+
+    foreach (i, queueFamily; queueFamilies)
+    {
+        if (queueFamily.queueCount > 0 && queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT)
+            indices.graphicsFamily = i;
+
+        if (indices.isComplete ())
+            break;
+    }
+
+    return indices;
 }
 
 private void createInstance ()
@@ -229,7 +288,18 @@ private void cleanup ()
     glfwTerminate ();
 }
 
-private auto assumeNoGC (T) (T t) nothrow if (isFunctionPointer!T || isDelegate!T) {
+private auto assumeNoGC (T) (T t) nothrow if (isFunctionPointer!T || isDelegate!T)
+{
 	enum attrs = functionAttributes!T | FunctionAttribute.nogc;
 	return cast (SetFunctionAttributes! (T, functionLinkage!T, attrs)) t;
+}
+
+struct QueueFamilyIndices // stfu
+{
+    int graphicsFamily = -1; // stfu
+
+    bool isComplete () // stfu
+    {
+        return graphicsFamily >= 0;
+    }
 }
