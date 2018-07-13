@@ -27,6 +27,7 @@ private VkInstance instance;
 private VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
 private VkDevice device;
 private VkQueue graphicsQueue;
+private VkSurfaceKHR surface;
 
 private VkDebugReportCallbackEXT debugCallback;
 
@@ -83,9 +84,16 @@ private void initVulkan ()
 
     setupDebugCallback ();
 
+    createSurface ();
+
     pickPhysicalDevice ();
 
     createLogicalDevice ();
+}
+
+private void createSurface ()
+{
+    glfwCreateWindowSurface (instance, window, null, &surface).enforceVk;
 }
 
 private void pickPhysicalDevice ()
@@ -174,6 +182,12 @@ private QueueFamilyIndices findQueueFamilies (VkPhysicalDevice device)
 
     foreach (int i, queueFamily; queueFamilies)
     {
+        VkBool32 presentSupport = false;
+        vkGetPhysicalDeviceSurfaceSupportKHR (device, i, surface, &presentSupport);
+
+        if (queueFamily.queueCount > 0 && presentSupport)
+            indices.presentFamily = i;
+
         if (queueFamily.queueCount > 0 && queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT)
             indices.graphicsFamily = i;
 
@@ -325,6 +339,7 @@ private void cleanup ()
     if (enableValidationLayers)
         destroyDebugReportCallbackEXT (instance, debugCallback, null);
 
+    vkDestroySurfaceKHR (instance, surface, null);
     vkDestroyInstance (instance, null);
 
     glfwDestroyWindow (window);
@@ -340,9 +355,10 @@ private auto assumeNoGC (T) (T t) nothrow if (isFunctionPointer!T || isDelegate!
 struct QueueFamilyIndices // stfu
 {
     int graphicsFamily = -1; // stfu
+    int presentFamily = -1; // stfu
 
     bool isComplete () // stfu
     {
-        return graphicsFamily >= 0;
+        return graphicsFamily >= 0 && presentFamily >= 0;
     }
 }
