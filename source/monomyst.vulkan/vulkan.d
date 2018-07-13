@@ -8,6 +8,7 @@ import std.traits;
 import std.exception;
 import std.algorithm;
 import std.container;
+import std.container.rbtree;
 import derelict.glfw3;
 import std.file : getcwd;
 import core.stdc.string : strcmp;
@@ -27,6 +28,7 @@ private VkInstance instance;
 private VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
 private VkDevice device;
 private VkQueue graphicsQueue;
+private VkQueue presentQueue;
 private VkSurfaceKHR surface;
 
 private VkDebugReportCallbackEXT debugCallback;
@@ -128,16 +130,24 @@ private void createLogicalDevice ()
 
     float [1] queuePriorities = [1.0f];
 
-    VkDeviceQueueCreateInfo queueInfo = {};
-    queueInfo.queueFamilyIndex = indices.graphicsFamily;
-    queueInfo.queueCount = queuePriorities.length;
-    queueInfo.pQueuePriorities = &queuePriorities [0];
+    VkDeviceQueueCreateInfo [] queueCreateInfos;
+    RedBlackTree!(int, "a < b", false) uniqueQueueFamilies = redBlackTree (indices.graphicsFamily, indices.presentFamily);
+
+    foreach (queueFamily; uniqueQueueFamilies)
+    {
+        VkDeviceQueueCreateInfo queueCreateInfo = {};
+        queueCreateInfo.queueFamilyIndex = queueFamily;
+        queueCreateInfo.queueCount = 1;
+        queueCreateInfo.pQueuePriorities = &queuePriorities [0];
+
+        queueCreateInfos ~= queueCreateInfo;
+    }
 
     VkPhysicalDeviceFeatures features = {};
 
     VkDeviceCreateInfo deviceInfo = {};
-    deviceInfo.pQueueCreateInfos = &queueInfo;
-    deviceInfo.queueCreateInfoCount = 1;
+    deviceInfo.queueCreateInfoCount = cast (uint) queueCreateInfos.length;
+    deviceInfo.pQueueCreateInfos = &queueCreateInfos [0];
     deviceInfo.pEnabledFeatures = &features;
     deviceInfo.enabledExtensionCount = 0;
 
@@ -160,6 +170,7 @@ private void createLogicalDevice ()
     loadDeviceLevelFunctions (device);
 
     vkGetDeviceQueue (device, indices.graphicsFamily, 0, &graphicsQueue);
+    vkGetDeviceQueue (device, indices.presentFamily, 0, &presentQueue);
 }
 
 private bool isDeviceSuitable (VkPhysicalDevice device)
