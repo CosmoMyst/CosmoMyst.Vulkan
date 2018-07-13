@@ -25,6 +25,8 @@ private const string [1] validationLayers = ["VK_LAYER_LUNARG_standard_validatio
 private GLFWwindow* window;
 private VkInstance instance;
 private VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
+private VkDevice device;
+private VkQueue graphicsQueue;
 
 private VkDebugReportCallbackEXT debugCallback;
 
@@ -82,6 +84,8 @@ private void initVulkan ()
     setupDebugCallback ();
 
     pickPhysicalDevice ();
+
+    createLogicalDevice ();
 }
 
 private void pickPhysicalDevice ()
@@ -110,6 +114,46 @@ private void pickPhysicalDevice ()
         throw new Exception ("Couldn't find a suitable physical device");
 }
 
+private void createLogicalDevice ()
+{
+    QueueFamilyIndices indices = findQueueFamilies (physicalDevice);
+
+    float [1] queuePriorities = [1.0f];
+
+    VkDeviceQueueCreateInfo queueInfo = {};
+    queueInfo.queueFamilyIndex = indices.graphicsFamily;
+    queueInfo.queueCount = queuePriorities.length;
+    queueInfo.pQueuePriorities = &queuePriorities [0];
+
+    VkPhysicalDeviceFeatures features = {};
+
+    VkDeviceCreateInfo deviceInfo = {};
+    deviceInfo.pQueueCreateInfos = &queueInfo;
+    deviceInfo.queueCreateInfoCount = 1;
+    deviceInfo.pEnabledFeatures = &features;
+    deviceInfo.enabledExtensionCount = 0;
+
+    if (enableValidationLayers)
+    {
+        const (char)* [] layers;
+        foreach (l; validationLayers)
+            layers ~= cast (const (char)*) l;
+
+        deviceInfo.enabledLayerCount = cast (uint) layers.length;
+        deviceInfo.ppEnabledLayerNames = &layers [0];
+    }
+    else
+    {
+        deviceInfo.enabledLayerCount = 0;
+    }
+
+    vkCreateDevice (physicalDevice, &deviceInfo, null, &device).enforceVk;
+
+    loadDeviceLevelFunctions (device);
+
+    vkGetDeviceQueue (device, indices.graphicsFamily, 0, &graphicsQueue);
+}
+
 private bool isDeviceSuitable (VkPhysicalDevice device)
 {
     QueueFamilyIndices indices = findQueueFamilies (device);
@@ -128,7 +172,7 @@ private QueueFamilyIndices findQueueFamilies (VkPhysicalDevice device)
     queueFamilies.length = queueFamilyCount;
     vkGetPhysicalDeviceQueueFamilyProperties (device, &queueFamilyCount, queueFamilies.ptr);
 
-    foreach (i, queueFamily; queueFamilies)
+    foreach (int i, queueFamily; queueFamilies)
     {
         if (queueFamily.queueCount > 0 && queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT)
             indices.graphicsFamily = i;
@@ -145,18 +189,15 @@ private void createInstance ()
     if (enableValidationLayers && !checkValidationLayerSupport)
         throw new Exception ("Validation layers are enabled but there's no support for them.");
 
-    VkApplicationInfo appInfo = {
-        pApplicationName: "MonoMyst.Vulkan",
-        applicationVersion: VK_MAKE_VERSION (1, 0, 0),
-        pEngineName: "MonoMyst",
-        engineVersion: VK_MAKE_VERSION (1, 0, 0),
-        apiVersion: VK_MAKE_VERSION (1, 0, 2)
-    };
+    VkApplicationInfo appInfo = {};
+    appInfo.pApplicationName = "MonoMyst.Vulkan";
+    appInfo.applicationVersion = VK_MAKE_VERSION (1, 0, 0);
+    appInfo.pEngineName = "MonoMyst";
+    appInfo.engineVersion = VK_MAKE_VERSION (1, 0, 0);
+    appInfo.apiVersion = VK_MAKE_VERSION (1, 0, 2);
 
-    VkInstanceCreateInfo createInfo = 
-    {
-        pApplicationInfo: &appInfo
-    };
+    VkInstanceCreateInfo createInfo = {};
+    createInfo.pApplicationInfo = &appInfo;
 
     const(char)* [] extensions = getRequiredExtensions ();
 
@@ -186,10 +227,9 @@ private void setupDebugCallback ()
 {
     if (!enableValidationLayers) return;
 
-    VkDebugReportCallbackCreateInfoEXT createInfo = {
-        flags: VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT,
-        pfnCallback: assumeNoGC (&vulkanDebugCallback)
-    };
+    VkDebugReportCallbackCreateInfoEXT createInfo = {};
+    createInfo.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT;
+    createInfo.pfnCallback = assumeNoGC (&vulkanDebugCallback);
 
     createDebugReportCallbackEXT (instance, &createInfo, null, &debugCallback).enforceVk;
 }
@@ -280,7 +320,10 @@ private void mainLoop ()
 
 private void cleanup ()
 {
-    destroyDebugReportCallbackEXT (instance, debugCallback, null);
+    vkDestroyDevice (device, null);
+
+    if (enableValidationLayers)
+        destroyDebugReportCallbackEXT (instance, debugCallback, null);
 
     vkDestroyInstance (instance, null);
 
