@@ -23,6 +23,11 @@ else
 
 private const string [1] validationLayers = ["VK_LAYER_LUNARG_standard_validation"];
 
+private const string [1] deviceExtensions = [VK_KHR_SWAPCHAIN_EXTENSION_NAME];
+
+private const uint width = 800;
+private const uint height = 600;
+
 private GLFWwindow* window;
 private VkInstance instance;
 private VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
@@ -30,6 +35,10 @@ private VkDevice device;
 private VkQueue graphicsQueue;
 private VkQueue presentQueue;
 private VkSurfaceKHR surface;
+private VkSwapchainKHR swapChain;
+private VkImage [] swapChainImages;
+private VkFormat swapChainImageFormat;
+private VkExtent2D swapChainExtent;
 
 private VkDebugReportCallbackEXT debugCallback;
 
@@ -70,7 +79,7 @@ private void initWindow ()
     glfwWindowHint (GLFW_CLIENT_API, GLFW_NO_API);
     glfwWindowHint (GLFW_RESIZABLE, GLFW_FALSE);
 
-    window = glfwCreateWindow (800, 600, "MonoMyst.Vulkan", null, null);
+    window = glfwCreateWindow (width, height, "MonoMyst.Vulkan", null, null);
 }
 
 private void enforceVk (VkResult result)
@@ -91,6 +100,59 @@ private void initVulkan ()
     pickPhysicalDevice ();
 
     createLogicalDevice ();
+
+    createSwapChain ();
+}
+
+private void createSwapChain ()
+{
+    SwapChainSupportDetails details = querySwapChainSupport (physicalDevice);
+
+    const (VkSurfaceFormatKHR) surfaceFormat = chooseSwapSurfaceFormat (details.formats);
+    const (VkPresentModeKHR) presentMode = choosePresentMode (details.presentModes);
+    const (VkExtent2D) extent = chooseSwapExtent (details.capabilities);
+
+    swapChainImageFormat = surfaceFormat.format;
+    swapChainExtent = extent;
+
+    uint imageCount = details.capabilities.minImageCount + 1;
+    if (details.capabilities.maxImageCount > 0 && imageCount > details.capabilities.maxImageCount)
+        imageCount = details.capabilities.maxImageCount;
+
+    VkSwapchainCreateInfoKHR createInfo = {};
+    createInfo.surface = surface;
+    createInfo.minImageCount = imageCount;
+    createInfo.imageFormat = surfaceFormat.format;
+    createInfo.imageColorSpace = surfaceFormat.colorSpace;
+    createInfo.imageExtent = extent;
+    createInfo.imageArrayLayers = 1;
+    createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+
+    const (QueueFamilyIndices) indices = findQueueFamilies (physicalDevice);
+    uint [] queueFamilyIndices = [cast (uint) indices.graphicsFamily, cast (uint) indices.presentFamily];
+
+    if (indices.graphicsFamily != indices.presentFamily)
+    {
+        createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
+        createInfo.queueFamilyIndexCount = 2;
+        createInfo.pQueueFamilyIndices = &queueFamilyIndices [0];
+    }
+    else
+    {
+        createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    }
+
+    createInfo.preTransform = details.capabilities.currentTransform;
+    createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+    createInfo.presentMode = presentMode;
+    createInfo.clipped = VK_TRUE;
+    createInfo.oldSwapchain = 0;
+
+    vkCreateSwapchainKHR (device, &createInfo, null, &swapChain).enforceVk;
+
+    vkGetSwapchainImagesKHR (device, swapChain, &imageCount, null);
+    swapChainImages.length = imageCount;
+    vkGetSwapchainImagesKHR (device, swapChain, &imageCount, &swapChainImages[0]);
 }
 
 private void createSurface ()
@@ -131,7 +193,8 @@ private void createLogicalDevice ()
     float [1] queuePriorities = [1.0f];
 
     VkDeviceQueueCreateInfo [] queueCreateInfos;
-    RedBlackTree!(int, "a < b", false) uniqueQueueFamilies = redBlackTree (indices.graphicsFamily, indices.presentFamily);
+    RedBlackTree!(int, "a < b", false) uniqueQueueFamilies = redBlackTree (indices.graphicsFamily,
+                                                                           indices.presentFamily);
 
     foreach (queueFamily; uniqueQueueFamilies)
     {
@@ -143,13 +206,19 @@ private void createLogicalDevice ()
         queueCreateInfos ~= queueCreateInfo;
     }
 
-    VkPhysicalDeviceFeatures features = {};
+    const (VkPhysicalDeviceFeatures) features = {};
 
     VkDeviceCreateInfo deviceInfo = {};
     deviceInfo.queueCreateInfoCount = cast (uint) queueCreateInfos.length;
     deviceInfo.pQueueCreateInfos = &queueCreateInfos [0];
     deviceInfo.pEnabledFeatures = &features;
-    deviceInfo.enabledExtensionCount = 0;
+    deviceInfo.enabledExtensionCount = cast (uint) deviceExtensions.length;
+
+    const (char)* [] extensionNames;
+    foreach (ext; deviceExtensions)
+        extensionNames ~= cast (const (char)*) ext;
+
+    deviceInfo.ppEnabledExtensionNames = &extensionNames [0];
 
     if (enableValidationLayers)
     {
@@ -177,7 +246,34 @@ private bool isDeviceSuitable (VkPhysicalDevice device)
 {
     QueueFamilyIndices indices = findQueueFamilies (device);
 
-    return indices.isComplete ();
+    immutable bool extensionsSupported = checkDeviceExtensionSupport (device);
+
+    bool swapChainSupport;
+    if (extensionsSupported)
+    {
+        const SwapChainSupportDetails details = querySwapChainSupport (device);
+        swapChainSupport = !details.formats.length == 0 && !details.presentModes.length == 0;
+    }
+
+    return indices.isComplete () && extensionsSupported && swapChainSupport;
+}
+
+private bool checkDeviceExtensionSupport (VkPhysicalDevice device)
+{
+    uint extensionCount;
+    vkEnumerateDeviceExtensionProperties (device, null, &extensionCount, null);
+
+    VkExtensionProperties [] availableExtensions;
+    availableExtensions.length = extensionCount;
+
+    vkEnumerateDeviceExtensionProperties (device, null, &extensionCount, &availableExtensions [0]);
+
+    foreach (requiredExtension; deviceExtensions)
+        if (!canFind!((VkExtensionProperties a, string b) => strcmp (a.extensionName.ptr, b.ptr) == 0)
+           (availableExtensions, requiredExtension))
+            return false;
+
+    return true;
 }
 
 private QueueFamilyIndices findQueueFamilies (VkPhysicalDevice device)
@@ -345,6 +441,8 @@ private void mainLoop ()
 
 private void cleanup ()
 {
+    vkDestroySwapchainKHR (device, swapChain, null);
+
     vkDestroyDevice (device, null);
 
     if (enableValidationLayers)
@@ -363,6 +461,90 @@ private auto assumeNoGC (T) (T t) nothrow if (isFunctionPointer!T || isDelegate!
 	return cast (SetFunctionAttributes! (T, functionLinkage!T, attrs)) t;
 }
 
+private SwapChainSupportDetails querySwapChainSupport (VkPhysicalDevice device)
+{
+    SwapChainSupportDetails details;
+
+    vkGetPhysicalDeviceSurfaceCapabilitiesKHR (device, surface, &details.capabilities);
+
+    uint formatCount;
+    vkGetPhysicalDeviceSurfaceFormatsKHR (device, surface, &formatCount, null);
+
+    if (formatCount != 0)
+    {
+        details.formats.length = formatCount;
+        vkGetPhysicalDeviceSurfaceFormatsKHR (device, surface, &formatCount, &details.formats [0]);
+    }
+
+    uint presentModeCount;
+    vkGetPhysicalDeviceSurfacePresentModesKHR (device, surface, &presentModeCount, null);
+
+    if (presentModeCount != 0)
+    {
+        details.presentModes.length = presentModeCount;
+        vkGetPhysicalDeviceSurfacePresentModesKHR (device, surface, &presentModeCount, &details.presentModes [0]);
+    }
+
+    return details;
+}
+
+private VkSurfaceFormatKHR chooseSwapSurfaceFormat (VkSurfaceFormatKHR [] availableFormats)
+{
+    if (availableFormats.length == 1 && availableFormats [0].format == VK_FORMAT_UNDEFINED)
+    {
+        VkSurfaceFormatKHR format =
+        {
+            format: VK_FORMAT_B8G8R8_UNORM,
+            colorSpace: VK_COLOR_SPACE_SRGB_NONLINEAR_KHR
+        };
+
+        return format;
+    }
+
+    foreach (availableFormat; availableFormats)
+    {
+        if (availableFormat.format == VK_FORMAT_B8G8R8_UNORM &&
+        availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
+            return availableFormat;
+    }
+
+    return availableFormats [0];
+}
+
+private VkPresentModeKHR choosePresentMode (VkPresentModeKHR [] availablePresentModes)
+{
+    VkPresentModeKHR bestMode = VK_PRESENT_MODE_FIFO_KHR;
+
+    foreach (availablePresentMode; availablePresentModes)
+    {
+        if (availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR)
+            return availablePresentMode;
+        else if (availablePresentMode == VK_PRESENT_MODE_IMMEDIATE_KHR)
+            bestMode = availablePresentMode;
+    }
+
+    return bestMode;
+}
+
+private VkExtent2D chooseSwapExtent (VkSurfaceCapabilitiesKHR capabilities)
+{
+    if (capabilities.currentExtent.width != uint.max)
+        return capabilities.currentExtent;
+    else
+    {
+        VkExtent2D actualExtent = {};
+        actualExtent.width = width;
+        actualExtent.height = height;
+
+        actualExtent.width = max (capabilities.minImageExtent.width,
+                                  min (capabilities.maxImageExtent.width, actualExtent.width));
+        actualExtent.height = max (capabilities.minImageExtent.height,
+                                   min (capabilities.maxImageExtent.height, actualExtent.height));
+
+        return actualExtent;
+    }
+}
+
 struct QueueFamilyIndices // stfu
 {
     int graphicsFamily = -1; // stfu
@@ -372,4 +554,11 @@ struct QueueFamilyIndices // stfu
     {
         return graphicsFamily >= 0 && presentFamily >= 0;
     }
+}
+
+struct SwapChainSupportDetails // stfu
+{
+    VkSurfaceCapabilitiesKHR capabilities; // stfu
+    VkSurfaceFormatKHR [] formats; // stfu
+    VkPresentModeKHR [] presentModes; // stfu
 }
