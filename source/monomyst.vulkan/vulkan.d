@@ -2,13 +2,13 @@ module monomyst.vulkan;
 
 import erupted;
 import std.conv;
+import std.file;
 import std.stdio;
 import std.string;
 import std.traits;
 import std.exception;
 import std.algorithm;
 import std.container;
-import std.container.rbtree;
 import derelict.glfw3;
 import std.file : getcwd;
 import core.stdc.string : strcmp;
@@ -105,6 +105,46 @@ private void initVulkan ()
     createSwapChain ();
 
     createImageViews ();
+
+    createGraphicsPipeline ();
+}
+
+private void createGraphicsPipeline ()
+{
+    import std.file : readFile = read;
+
+    ubyte [] vertShaderCode = cast (ubyte []) readFile (format ("%s/../vert.spv", thisExePath));
+    ubyte [] fragShaderCode = cast (ubyte []) readFile (format ("%s/../frag.spv", thisExePath));
+
+    VkShaderModule vertShaderModule = createShaderModule (vertShaderCode);
+    VkShaderModule fragShaderModule = createShaderModule (fragShaderCode);
+
+    VkPipelineShaderStageCreateInfo vertShaderStageInfo = {};
+    vertShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
+    vertShaderStageInfo._module = vertShaderModule;
+    vertShaderStageInfo.pName = "main";
+
+    VkPipelineShaderStageCreateInfo fragShaderStageInfo = {};
+    fragShaderStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+    fragShaderStageInfo._module = fragShaderModule;
+    fragShaderStageInfo.pName = "main";
+
+    VkPipelineShaderStageCreateInfo [] shaderStages = [vertShaderStageInfo, fragShaderStageInfo];
+
+    vkDestroyShaderModule (device, fragShaderModule, null);
+    vkDestroyShaderModule (device, vertShaderModule, null);
+}
+
+private VkShaderModule createShaderModule (ubyte [] code)
+{
+    VkShaderModuleCreateInfo createInfo = {};
+    createInfo.codeSize = cast (uint) code.length;
+    createInfo.pCode = cast (uint*) code.ptr;
+
+    VkShaderModule shaderModule;
+    vkCreateShaderModule (device, &createInfo, null, &shaderModule).enforceVk;
+
+    return shaderModule;
 }
 
 private void createImageViews ()
