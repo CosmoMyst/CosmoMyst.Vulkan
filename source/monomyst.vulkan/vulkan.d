@@ -34,6 +34,8 @@ private VkSemaphore [] imageAvailableSemaphores;
 private VkSemaphore [] renderFinishedSemaphores;
 private VkFence [] inFlightFences;
 
+private bool frameBufferResized;
+
 private GLFWwindow* window;
 private VkInstance instance;
 private VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
@@ -65,7 +67,8 @@ void run () // stfu
     cleanup ();
 }
 
-extern (System) static VkBool32 vulkanDebugCallback (VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType, ulong obj, //stfu
+extern (System)
+private static VkBool32 vulkanDebugCallback (VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType, ulong obj, //stfu
 		                                              size_t location, int code, const (char*) layerPrefix, // stfu
                                                       const (char*) msg, void* userData) nothrow
 {
@@ -92,9 +95,18 @@ private void initWindow ()
     glfwInit ();
 
     glfwWindowHint (GLFW_CLIENT_API, GLFW_NO_API);
-    glfwWindowHint (GLFW_RESIZABLE, GLFW_FALSE);
 
     window = glfwCreateWindow (width, height, "MonoMyst.Vulkan", null, null);
+
+    // glfwSetWindowUserPointer (window, this);
+
+    glfwSetFramebufferSizeCallback (window, &frameBufferResizeCallback);
+}
+
+extern (C)
+private void frameBufferResizeCallback (GLFWwindow* window, int width, int height) nothrow
+{
+    frameBufferResized = true;
 }
 
 private void enforceVk (VkResult result)
@@ -131,6 +143,28 @@ private void initVulkan ()
     createCommandBuffers ();
 
     createSyncObjects ();
+}
+
+private void recreateSwapCain ()
+{
+    int ewidth = 0;
+    int eheight = 0;
+    while (ewidth == 0 || eheight == 0)
+    {
+        glfwGetFramebufferSize (window, &ewidth, &eheight);
+        glfwWaitEvents ();
+    }
+
+    vkDeviceWaitIdle (device);
+
+    cleanupSwapChain ();
+
+    createSwapChain ();
+    createImageViews ();
+    createRenderPass ();
+    createGraphicsPipeline ();
+    createFramebuffers ();
+    createCommandBuffers ();
 }
 
 private void createSyncObjects ()
@@ -756,7 +790,17 @@ private void drawFrame ()
     vkResetFences (device, 1, &inFlightFences [currentFrame]);
 
     uint imageIndex;
-    vkAcquireNextImageKHR (device, swapChain, uint.max, imageAvailableSemaphores [currentFrame], 0, &imageIndex);
+    VkResult result = vkAcquireNextImageKHR (device, swapChain, uint.max, imageAvailableSemaphores [currentFrame], 0, &imageIndex);
+
+    if (result == VK_ERROR_OUT_OF_DATE_KHR)
+    {
+        recreateSwapCain ();
+        return;
+    }
+    else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
+    {
+        throw new Exception ("Failed to acquire swap chain image.");
+    }
 
     VkSubmitInfo submitInfo = {};
 
@@ -787,24 +831,27 @@ private void drawFrame ()
     presentInfo.pSwapchains = &swapChains [0];
     presentInfo.pImageIndices = &imageIndex;
 
-    vkQueuePresentKHR (presentQueue, &presentInfo);
+    result = vkQueuePresentKHR (presentQueue, &presentInfo);
+
+    if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || frameBufferResized)
+    {
+        recreateSwapCain ();
+        frameBufferResized = false;
+    }
+    else if (result != VK_SUCCESS)
+    {
+        throw new Exception ("Failed to present swap chain image.");
+    }
 
     currentFrame = (currentFrame + 1) % maxFramesInFlight;
 }
 
-private void cleanup ()
+private void cleanupSwapChain ()
 {
-    for (int i; i < maxFramesInFlight; i++)
-    {
-        vkDestroySemaphore (device, renderFinishedSemaphores [i], null);
-        vkDestroySemaphore (device, imageAvailableSemaphores [i], null);
-        vkDestroyFence (device, inFlightFences [i], null);
-    }
-
-    vkDestroyCommandPool (device, commandPool, null);
-
     foreach (framebuffer; swapChainFramebuffers)
         vkDestroyFramebuffer (device, framebuffer, null);
+
+    vkFreeCommandBuffers (device, commandPool, cast (uint) commandBuffers.length, &commandBuffers [0]);
 
     vkDestroyPipeline (device, graphicsPipeline, null);
 
@@ -816,6 +863,20 @@ private void cleanup ()
         vkDestroyImageView (device, imageView, null);
 
     vkDestroySwapchainKHR (device, swapChain, null);
+}
+
+private void cleanup ()
+{
+    cleanupSwapChain ();
+
+    for (int i; i < maxFramesInFlight; i++)
+    {
+        vkDestroySemaphore (device, renderFinishedSemaphores [i], null);
+        vkDestroySemaphore (device, imageAvailableSemaphores [i], null);
+        vkDestroyFence (device, inFlightFences [i], null);
+    }
+
+    vkDestroyCommandPool (device, commandPool, null);
 
     vkDestroyDevice (device, null);
 
@@ -906,6 +967,10 @@ private VkExtent2D chooseSwapExtent (VkSurfaceCapabilitiesKHR capabilities)
         return capabilities.currentExtent;
     else
     {
+        int ewidth;
+        int eheight;
+        glfwGetFramebufferSize (window, &ewidth, &eheight);
+
         VkExtent2D actualExtent = {};
         actualExtent.width = width;
         actualExtent.height = height;
