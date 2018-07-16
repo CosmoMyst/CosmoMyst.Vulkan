@@ -44,6 +44,7 @@ private VkRenderPass renderPass;
 private VkPipelineLayout pipelineLayout;
 private VkPipeline graphicsPipeline;
 private VkFramebuffer [] swapChainFramebuffers;
+private VkCommandPool commandPool;
 
 private VkDebugReportCallbackEXT debugCallback;
 
@@ -115,6 +116,18 @@ private void initVulkan ()
     createGraphicsPipeline ();
 
     createFramebuffers ();
+
+    createCommandPool ();
+}
+
+private void createCommandPool ()
+{
+    QueueFamilyIndices indices = findQueueFamilies (physicalDevice);
+
+    VkCommandPoolCreateInfo poolInfo = {};
+    poolInfo.queueFamilyIndex = indices.graphicsFamily;
+
+    vkCreateCommandPool (device, &poolInfo, null, &commandPool).enforceVk;
 }
 
 private void createFramebuffers ()
@@ -646,6 +659,8 @@ private void mainLoop ()
 
 private void cleanup ()
 {
+    vkDestroyCommandPool (device, commandPool, null);
+
     foreach (framebuffer; swapChainFramebuffers)
         vkDestroyFramebuffer (device, framebuffer, null);
 
