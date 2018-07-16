@@ -43,6 +43,7 @@ private VkExtent2D swapChainExtent;
 private VkRenderPass renderPass;
 private VkPipelineLayout pipelineLayout;
 private VkPipeline graphicsPipeline;
+private VkFramebuffer [] swapChainFramebuffers;
 
 private VkDebugReportCallbackEXT debugCallback;
 
@@ -112,6 +113,28 @@ private void initVulkan ()
     createRenderPass ();
 
     createGraphicsPipeline ();
+
+    createFramebuffers ();
+}
+
+private void createFramebuffers ()
+{
+    swapChainFramebuffers.length = swapChainImageViews.length;
+
+    foreach (int i, imageView; swapChainImageViews)
+    {
+        VkImageView [1] attachments = [imageView];
+
+        VkFramebufferCreateInfo framebufferInfo = {};
+        framebufferInfo.renderPass = renderPass;
+        framebufferInfo.attachmentCount = 1;
+        framebufferInfo.pAttachments = &attachments [0];
+        framebufferInfo.width = swapChainExtent.width;
+        framebufferInfo.height = swapChainExtent.height;
+        framebufferInfo.layers = 1;
+
+        vkCreateFramebuffer (device, &framebufferInfo, null, &swapChainFramebuffers [i]).enforceVk;
+    }
 }
 
 private void createRenderPass ()
@@ -623,6 +646,9 @@ private void mainLoop ()
 
 private void cleanup ()
 {
+    foreach (framebuffer; swapChainFramebuffers)
+        vkDestroyFramebuffer (device, framebuffer, null);
+
     vkDestroyPipeline (device, graphicsPipeline, null);
 
     vkDestroyPipelineLayout (device, pipelineLayout, null);
