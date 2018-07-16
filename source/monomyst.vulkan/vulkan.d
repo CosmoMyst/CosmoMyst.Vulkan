@@ -45,6 +45,7 @@ private VkPipelineLayout pipelineLayout;
 private VkPipeline graphicsPipeline;
 private VkFramebuffer [] swapChainFramebuffers;
 private VkCommandPool commandPool;
+private VkCommandBuffer [] commandBuffers;
 
 private VkDebugReportCallbackEXT debugCallback;
 
@@ -118,6 +119,53 @@ private void initVulkan ()
     createFramebuffers ();
 
     createCommandPool ();
+
+    createCommandBuffers ();
+}
+
+private void createCommandBuffers ()
+{
+    commandBuffers.length = swapChainFramebuffers.length;
+
+    VkCommandBufferAllocateInfo allocInfo = {};
+    allocInfo.commandPool = commandPool;
+    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    allocInfo.commandBufferCount = cast (uint) commandBuffers.length;
+
+    vkAllocateCommandBuffers (device, &allocInfo, &commandBuffers [0]).enforceVk;
+
+    foreach (int i, cmdBuffer; commandBuffers)
+    {
+        VkCommandBufferBeginInfo beginInfo = {};
+        beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+
+        vkBeginCommandBuffer (cmdBuffer, &beginInfo).enforceVk;
+
+        VkRenderPassBeginInfo renderPassInfo = {};
+        renderPassInfo.renderPass = renderPass;
+        renderPassInfo.framebuffer = swapChainFramebuffers [i];
+        renderPassInfo.renderArea.offset.x = 0;
+        renderPassInfo.renderArea.offset.y = 0;
+        renderPassInfo.renderArea.extent = swapChainExtent;
+
+        VkClearValue clearColor = {};
+        clearColor.color.float32 = [0.0f, 0.0f, 0.0f, 1.0f];
+
+        renderPassInfo.clearValueCount = 1;
+        renderPassInfo.pClearValues = &clearColor;
+
+        vkCmdBeginRenderPass (cmdBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+        vkCmdBindPipeline (cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
+
+        vkCmdDraw (cmdBuffer, 3, 1, 0, 0);
+
+        vkCmdEndRenderPass (cmdBuffer);
+
+        vkEndCommandBuffer (cmdBuffer).enforceVk;
+    }
+
+    
 }
 
 private void createCommandPool ()
