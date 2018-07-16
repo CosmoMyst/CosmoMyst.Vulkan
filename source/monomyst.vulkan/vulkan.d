@@ -28,6 +28,12 @@ private const string [1] deviceExtensions = [VK_KHR_SWAPCHAIN_EXTENSION_NAME];
 private const uint width = 800;
 private const uint height = 600;
 
+private const int maxFramesInFlight = 2;
+
+private VkSemaphore [] imageAvailableSemaphores;
+private VkSemaphore [] renderFinishedSemaphores;
+private VkFence [] inFlightFences;
+
 private GLFWwindow* window;
 private VkInstance instance;
 private VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
@@ -46,8 +52,8 @@ private VkPipeline graphicsPipeline;
 private VkFramebuffer [] swapChainFramebuffers;
 private VkCommandPool commandPool;
 private VkCommandBuffer [] commandBuffers;
-private VkSemaphore imageAvailableSemaphore;
-private VkSemaphore renderFinishedSemaphore;
+
+private size_t currentFrame;
 
 private VkDebugReportCallbackEXT debugCallback;
 
@@ -124,15 +130,26 @@ private void initVulkan ()
 
     createCommandBuffers ();
 
-    createSemaphores ();
+    createSyncObjects ();
 }
 
-private void createSemaphores ()
+private void createSyncObjects ()
 {
+    imageAvailableSemaphores.length = maxFramesInFlight;
+    renderFinishedSemaphores.length = maxFramesInFlight;
+    inFlightFences.length = maxFramesInFlight;
+
     VkSemaphoreCreateInfo semaphoreInfo = {};
 
-    vkCreateSemaphore (device, &semaphoreInfo, null, &imageAvailableSemaphore).enforceVk;
-    vkCreateSemaphore (device, &semaphoreInfo, null, &renderFinishedSemaphore).enforceVk;
+    VkFenceCreateInfo fenceInfo = {};
+    fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+
+    for (int i; i < maxFramesInFlight; i++)
+    {
+        vkCreateSemaphore (device, &semaphoreInfo, null, &imageAvailableSemaphores [i]).enforceVk;
+        vkCreateSemaphore (device, &semaphoreInfo, null, &renderFinishedSemaphores [i]).enforceVk;
+        vkCreateFence (device, &fenceInfo, null, &inFlightFences [i]).enforceVk;
+    }
 }
 
 private void createCommandBuffers ()
@@ -735,12 +752,15 @@ private void mainLoop ()
 
 private void drawFrame ()
 {
+    vkWaitForFences (device, 1, &inFlightFences [currentFrame], VK_TRUE, uint.max);
+    vkResetFences (device, 1, &inFlightFences [currentFrame]);
+
     uint imageIndex;
-    vkAcquireNextImageKHR (device, swapChain, uint.max, imageAvailableSemaphore, 0, &imageIndex);
+    vkAcquireNextImageKHR (device, swapChain, uint.max, imageAvailableSemaphores [currentFrame], 0, &imageIndex);
 
     VkSubmitInfo submitInfo = {};
 
-    VkSemaphore [1] waitSemaphores = [imageAvailableSemaphore];
+    VkSemaphore [1] waitSemaphores = [imageAvailableSemaphores [currentFrame]];
 
     VkPipelineStageFlags [1] waitStages = [VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT];
     
@@ -750,12 +770,12 @@ private void drawFrame ()
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = &commandBuffers [imageIndex];
 
-    VkSemaphore [1] signalSemaphores = [renderFinishedSemaphore];
+    VkSemaphore [1] signalSemaphores = [renderFinishedSemaphores [currentFrame]];
 
     submitInfo.signalSemaphoreCount = 1;
     submitInfo.pSignalSemaphores = &signalSemaphores [0];
 
-    vkQueueSubmit (graphicsQueue, 1, &submitInfo, 0).enforceVk;
+    vkQueueSubmit (graphicsQueue, 1, &submitInfo, inFlightFences [currentFrame]).enforceVk;
 
     VkPresentInfoKHR presentInfo = {};
     presentInfo.waitSemaphoreCount = 1;
@@ -768,12 +788,18 @@ private void drawFrame ()
     presentInfo.pImageIndices = &imageIndex;
 
     vkQueuePresentKHR (presentQueue, &presentInfo);
+
+    currentFrame = (currentFrame + 1) % maxFramesInFlight;
 }
 
 private void cleanup ()
 {
-    vkDestroySemaphore (device, renderFinishedSemaphore, null);
-    vkDestroySemaphore (device, imageAvailableSemaphore, null);
+    for (int i; i < maxFramesInFlight; i++)
+    {
+        vkDestroySemaphore (device, renderFinishedSemaphores [i], null);
+        vkDestroySemaphore (device, imageAvailableSemaphores [i], null);
+        vkDestroyFence (device, inFlightFences [i], null);
+    }
 
     vkDestroyCommandPool (device, commandPool, null);
 
