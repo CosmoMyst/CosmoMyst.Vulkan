@@ -42,6 +42,7 @@ private VkFormat swapChainImageFormat;
 private VkExtent2D swapChainExtent;
 private VkRenderPass renderPass;
 private VkPipelineLayout pipelineLayout;
+private VkPipeline graphicsPipeline;
 
 private VkDebugReportCallbackEXT debugCallback;
 
@@ -194,6 +195,7 @@ private void createGraphicsPipeline ()
 
     VkPipelineRasterizationStateCreateInfo rasterizer = {};
     rasterizer.depthClampEnable = VK_FALSE;
+    rasterizer.depthBiasClamp = 0;
     rasterizer.rasterizerDiscardEnable = VK_FALSE;
     rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
     rasterizer.lineWidth = 1.0f;
@@ -226,6 +228,23 @@ private void createGraphicsPipeline ()
     VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
 
     vkCreatePipelineLayout (device, &pipelineLayoutInfo, null, &pipelineLayout).enforceVk;
+
+    VkGraphicsPipelineCreateInfo pipelineInfo = {};
+    pipelineInfo.stageCount = 2;
+    pipelineInfo.pStages = &shaderStages[0];
+    pipelineInfo.pVertexInputState = &vertexInputInfo;
+    pipelineInfo.pInputAssemblyState = &inputAssembly;
+    pipelineInfo.pViewportState = &viewportState;
+    pipelineInfo.pRasterizationState = &rasterizer;
+    pipelineInfo.pMultisampleState = &multisampling;
+    pipelineInfo.pDepthStencilState = null;
+    pipelineInfo.pColorBlendState = &colorBlending;
+    pipelineInfo.pDynamicState = null;
+    pipelineInfo.layout = pipelineLayout;
+    pipelineInfo.renderPass = renderPass;
+    pipelineInfo.subpass = 0;
+
+    vkCreateGraphicsPipelines (device, 0, 1, &pipelineInfo, null, &graphicsPipeline).enforceVk;
 
     vkDestroyShaderModule (device, fragShaderModule, null);
     vkDestroyShaderModule (device, vertShaderModule, null);
@@ -604,6 +623,8 @@ private void mainLoop ()
 
 private void cleanup ()
 {
+    vkDestroyPipeline (device, graphicsPipeline, null);
+
     vkDestroyPipelineLayout (device, pipelineLayout, null);
 
     vkDestroyRenderPass (device, renderPass, null);
