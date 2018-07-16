@@ -46,6 +46,8 @@ private VkPipeline graphicsPipeline;
 private VkFramebuffer [] swapChainFramebuffers;
 private VkCommandPool commandPool;
 private VkCommandBuffer [] commandBuffers;
+private VkSemaphore imageAvailableSemaphore;
+private VkSemaphore renderFinishedSemaphore;
 
 private VkDebugReportCallbackEXT debugCallback;
 
@@ -121,6 +123,16 @@ private void initVulkan ()
     createCommandPool ();
 
     createCommandBuffers ();
+
+    createSemaphores ();
+}
+
+private void createSemaphores ()
+{
+    VkSemaphoreCreateInfo semaphoreInfo = {};
+
+    vkCreateSemaphore (device, &semaphoreInfo, null, &imageAvailableSemaphore).enforceVk;
+    vkCreateSemaphore (device, &semaphoreInfo, null, &renderFinishedSemaphore).enforceVk;
 }
 
 private void createCommandBuffers ()
@@ -224,6 +236,17 @@ private void createRenderPass ()
     renderPassInfo.pAttachments = &colorAttachment;
     renderPassInfo.subpassCount = 1;
     renderPassInfo.pSubpasses = &subpass;
+
+    VkSubpassDependency dependency = {};
+    dependency.dstSubpass = 0;
+    dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependency.srcAccessMask = 0;
+    dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT |
+                               VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
+    renderPassInfo.dependencyCount = 1;
+    renderPassInfo.pDependencies = &dependency;
 
     vkCreateRenderPass (device, &renderPassInfo, null, &renderPass).enforceVk;
 }
@@ -702,11 +725,56 @@ private const (char)* [] getRequiredExtensions ()
 private void mainLoop ()
 {
     while (!glfwWindowShouldClose (window))
+    {
         glfwPollEvents ();
+        drawFrame ();
+    }
+
+    vkDeviceWaitIdle (device);
+}
+
+private void drawFrame ()
+{
+    uint imageIndex;
+    vkAcquireNextImageKHR (device, swapChain, uint.max, imageAvailableSemaphore, 0, &imageIndex);
+
+    VkSubmitInfo submitInfo = {};
+
+    VkSemaphore [1] waitSemaphores = [imageAvailableSemaphore];
+
+    VkPipelineStageFlags [1] waitStages = [VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT];
+    
+    submitInfo.waitSemaphoreCount = 1;
+    submitInfo.pWaitSemaphores = &waitSemaphores [0];
+    submitInfo.pWaitDstStageMask = &waitStages [0];
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &commandBuffers [imageIndex];
+
+    VkSemaphore [1] signalSemaphores = [renderFinishedSemaphore];
+
+    submitInfo.signalSemaphoreCount = 1;
+    submitInfo.pSignalSemaphores = &signalSemaphores [0];
+
+    vkQueueSubmit (graphicsQueue, 1, &submitInfo, 0).enforceVk;
+
+    VkPresentInfoKHR presentInfo = {};
+    presentInfo.waitSemaphoreCount = 1;
+    presentInfo.pWaitSemaphores = &signalSemaphores [0];
+
+    VkSwapchainKHR [1] swapChains = [swapChain];
+
+    presentInfo.swapchainCount = 1;
+    presentInfo.pSwapchains = &swapChains [0];
+    presentInfo.pImageIndices = &imageIndex;
+
+    vkQueuePresentKHR (presentQueue, &presentInfo);
 }
 
 private void cleanup ()
 {
+    vkDestroySemaphore (device, renderFinishedSemaphore, null);
+    vkDestroySemaphore (device, imageAvailableSemaphore, null);
+
     vkDestroyCommandPool (device, commandPool, null);
 
     foreach (framebuffer; swapChainFramebuffers)
