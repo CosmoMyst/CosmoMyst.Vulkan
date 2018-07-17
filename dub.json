@@ -5,7 +5,8 @@
 	],
 	"dependencies": {
 		"erupted": "~>2.0.4",
-		"derelict-glfw3": "~>4.0.0-beta.1"
+		"derelict-glfw3": "~>4.0.0-beta.1",
+		"monomyst-math": { "path": "MonoMyst.Math/" }
 	},
 	"subConfigurations": {
 		"derelict-glfw3": "derelict-glfw3-dynamic"

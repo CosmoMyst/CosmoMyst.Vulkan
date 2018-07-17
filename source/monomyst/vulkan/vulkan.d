@@ -13,6 +13,9 @@ import derelict.glfw3;
 import std.file : getcwd;
 import core.stdc.string : strcmp;
 import erupted.vulkan_lib_loader;
+import monomyst.math.vector2;
+import monomyst.math.vector3;
+import std.datetime.stopwatch;
 
 mixin DerelictGLFW3_VulkanBind;
 
@@ -54,13 +57,26 @@ private VkPipeline graphicsPipeline;
 private VkFramebuffer [] swapChainFramebuffers;
 private VkCommandPool commandPool;
 private VkCommandBuffer [] commandBuffers;
+private VkBuffer vertexBuffer;
+private VkDeviceMemory vertexBufferMemory;
 
 private size_t currentFrame;
 
 private VkDebugReportCallbackEXT debugCallback;
 
+private Vertex [3] vertices;
+
 void run () // stfu
 {
+    // NOTE: This should be in the module (outside of a function) but then all components are nan.
+    // No clue why this is.
+    vertices =
+    [
+        Vertex (Vector2 (0.0f, -0.5f), Vector3 (1.0f, 0.0f, 0.0f)),
+        Vertex (Vector2 (0.5f, 0.5f),  Vector3 (0.0f, 1.0f, 0.0f)),
+        Vertex (Vector2 (-0.5f, 0.5f), Vector3 (0.0f, 0.0f, 1.0f))
+    ];
+
     initWindow ();
     initVulkan ();
     mainLoop ();
@@ -69,8 +85,8 @@ void run () // stfu
 
 extern (System)
 private static VkBool32 vulkanDebugCallback (VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType, ulong obj, //stfu
-		                                              size_t location, int code, const (char*) layerPrefix, // stfu
-                                                      const (char*) msg, void* userData) nothrow
+                                             size_t location, int code, const (char*) layerPrefix, // stfu
+                                             const (char*) msg, void* userData) nothrow
 {
 	import std.stdio : stderr, fprintf;
 	import std.string : fromStringz;
@@ -140,9 +156,108 @@ private void initVulkan ()
 
     createCommandPool ();
 
+    createVertexBuffer ();
+
     createCommandBuffers ();
 
     createSyncObjects ();
+}
+
+private void createBuffer (VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties,
+                           ref VkBuffer buffer, ref VkDeviceMemory bufferMemory)
+{
+    VkBufferCreateInfo bufferInfo = {};
+    bufferInfo.size = size;
+    bufferInfo.usage = usage;
+    bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+    vkCreateBuffer (device, &bufferInfo, null, &buffer).enforceVk;
+
+    VkMemoryRequirements memRequirements;
+    vkGetBufferMemoryRequirements (device, buffer, &memRequirements);
+
+    VkMemoryAllocateInfo allocInfo = {};
+    allocInfo.allocationSize = memRequirements.size;
+    allocInfo.memoryTypeIndex = findMemoryType (memRequirements.memoryTypeBits, properties);
+
+    vkAllocateMemory (device, &allocInfo, null, &bufferMemory).enforceVk;
+
+    vkBindBufferMemory (device, buffer, bufferMemory, 0);
+}
+
+private void copyBuffer (VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size)
+{
+    VkCommandBufferAllocateInfo allocInfo = {};
+    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    allocInfo.commandPool = commandPool;
+    allocInfo.commandBufferCount = 1;
+
+    VkCommandBuffer cmdBuffer;
+
+    vkAllocateCommandBuffers (device, &allocInfo, &cmdBuffer);
+
+    VkCommandBufferBeginInfo beginInfo = {};
+    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+    vkBeginCommandBuffer (cmdBuffer, &beginInfo);
+
+        VkBufferCopy copyRegion = {};
+        copyRegion.size = size;
+
+        vkCmdCopyBuffer (cmdBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
+
+    vkEndCommandBuffer (cmdBuffer);
+
+    VkSubmitInfo submitInfo = {};
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &cmdBuffer;
+
+    vkQueueSubmit (graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
+    vkQueueWaitIdle (graphicsQueue);
+
+    vkFreeCommandBuffers (device, commandPool, 1, &cmdBuffer);
+}
+
+private void createVertexBuffer ()
+{
+    import core.stdc.string : memcpy;
+
+    VkDeviceSize bufferSize = vertices [0].sizeof * vertices.length;
+
+    VkBuffer stagingBuffer;
+    VkDeviceMemory stagingBufferMemory;
+
+    createBuffer (bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                              VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                              VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                              stagingBuffer, stagingBufferMemory);
+
+    void* data;
+    vkMapMemory (device, stagingBufferMemory, 0, bufferSize, 0, &data);
+    memcpy (data, &vertices [0], cast (size_t) bufferSize);
+    vkUnmapMemory (device, stagingBufferMemory);
+
+    createBuffer (bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT |
+                              VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+                              VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+                              vertexBuffer, vertexBufferMemory);
+
+    copyBuffer (stagingBuffer, vertexBuffer, bufferSize);
+
+    vkDestroyBuffer (device, stagingBuffer, null);
+    vkFreeMemory (device, stagingBufferMemory, null);
+}
+
+private uint findMemoryType (uint typeFilter, VkMemoryPropertyFlags properties)
+{
+    VkPhysicalDeviceMemoryProperties memProperties;
+    vkGetPhysicalDeviceMemoryProperties (physicalDevice, &memProperties);
+
+    for (int i; i < memProperties.memoryTypeCount; i++)
+        if ((typeFilter & (1 << i)) && (memProperties.memoryTypes [i].propertyFlags & properties) == properties)
+            return i;
+
+    throw new Exception ("Failed to find suitable memory type.");
 }
 
 private void recreateSwapCain ()
@@ -197,7 +312,7 @@ private void createCommandBuffers ()
 
     vkAllocateCommandBuffers (device, &allocInfo, &commandBuffers [0]).enforceVk;
 
-    foreach (int i, cmdBuffer; commandBuffers)
+    foreach (size_t i, cmdBuffer; commandBuffers)
     {
         VkCommandBufferBeginInfo beginInfo = {};
         beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
@@ -219,16 +334,18 @@ private void createCommandBuffers ()
 
         vkCmdBeginRenderPass (cmdBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-        vkCmdBindPipeline (cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
+            vkCmdBindPipeline (cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
 
-        vkCmdDraw (cmdBuffer, 3, 1, 0, 0);
+            VkBuffer [1] vertexBuffers = [vertexBuffer];
+            VkDeviceSize [1] offsets = [0];
+            vkCmdBindVertexBuffers (cmdBuffer, 0, 1, &vertexBuffers [0], &offsets [0]);
+
+            vkCmdDraw (cmdBuffer, cast (uint) vertices.length, 1, 0, 0);
 
         vkCmdEndRenderPass (cmdBuffer);
 
         vkEndCommandBuffer (cmdBuffer).enforceVk;
     }
-
-    
 }
 
 private void createCommandPool ()
@@ -328,6 +445,14 @@ private void createGraphicsPipeline ()
     vertexInputInfo.vertexBindingDescriptionCount = 0;
     vertexInputInfo.vertexAttributeDescriptionCount = 0;
 
+    auto bindingDescription = Vertex.getBindingDescription ();
+    auto attributeDescriptions = Vertex.getAttributeDescriptions ();
+
+    vertexInputInfo.vertexBindingDescriptionCount = 1;
+    vertexInputInfo.vertexAttributeDescriptionCount = cast (uint) attributeDescriptions.length;
+    vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
+    vertexInputInfo.pVertexAttributeDescriptions = &attributeDescriptions [0];
+
     VkPipelineInputAssemblyStateCreateInfo inputAssembly = {};
     inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
     inputAssembly.primitiveRestartEnable = VK_FALSE;
@@ -402,7 +527,7 @@ private void createGraphicsPipeline ()
     pipelineInfo.renderPass = renderPass;
     pipelineInfo.subpass = 0;
 
-    vkCreateGraphicsPipelines (device, 0, 1, &pipelineInfo, null, &graphicsPipeline).enforceVk;
+    vkCreateGraphicsPipelines (device, VK_NULL_HANDLE, 1, &pipelineInfo, null, &graphicsPipeline).enforceVk;
 
     vkDestroyShaderModule (device, fragShaderModule, null);
     vkDestroyShaderModule (device, vertShaderModule, null);
@@ -486,7 +611,7 @@ private void createSwapChain ()
     createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
     createInfo.presentMode = presentMode;
     createInfo.clipped = VK_TRUE;
-    createInfo.oldSwapchain = 0;
+    createInfo.oldSwapchain = VK_NULL_HANDLE;
 
     vkCreateSwapchainKHR (device, &createInfo, null, &swapChain).enforceVk;
 
@@ -604,6 +729,7 @@ private bool checkDeviceExtensionSupport (VkPhysicalDevice device)
     vkEnumerateDeviceExtensionProperties (device, null, &extensionCount, null);
 
     VkExtensionProperties [] availableExtensions;
+
     availableExtensions.length = extensionCount;
 
     vkEnumerateDeviceExtensionProperties (device, null, &extensionCount, &availableExtensions [0]);
@@ -660,10 +786,14 @@ private void createInstance ()
     VkInstanceCreateInfo createInfo = {};
     createInfo.pApplicationInfo = &appInfo;
 
-    const(char)* [] extensions = getRequiredExtensions ();
+    string [] extensions = getRequiredExtensions ();
+
+    const (char)* [] extPtrs;
+    foreach (e; extensions)
+        extPtrs ~= cast (const (char)*) e;
 
     createInfo.enabledExtensionCount = cast (uint) extensions.length;
-    createInfo.ppEnabledExtensionNames = &extensions [0];
+    createInfo.ppEnabledExtensionNames = &extPtrs [0];
 
     if (enableValidationLayers)
     {
@@ -752,9 +882,9 @@ private bool checkValidationLayerSupport ()
     return true;
 }
 
-private const (char)* [] getRequiredExtensions ()
+private string [] getRequiredExtensions ()
 {
-    const (char)* [] extensions;
+    string [] extensions;
 
     uint glfwExtensionCount;
     const char** glfwExtensions = glfwGetRequiredInstanceExtensions (&glfwExtensionCount);
@@ -763,8 +893,7 @@ private const (char)* [] getRequiredExtensions ()
 
     for (int i; i < glfwExtensionCount; i++)
     {
-        const (string) ext = glfwExtensions [i].to!string;
-        extensions [i] = cast (const (char)*) ext;
+        extensions [i] = glfwExtensions [i].to!string;
     }
 
     if (enableValidationLayers)
@@ -790,7 +919,12 @@ private void drawFrame ()
     vkResetFences (device, 1, &inFlightFences [currentFrame]);
 
     uint imageIndex;
-    VkResult result = vkAcquireNextImageKHR (device, swapChain, uint.max, imageAvailableSemaphores [currentFrame], 0, &imageIndex);
+    VkResult result = vkAcquireNextImageKHR (device, swapChain,
+                                             uint.max,
+                                             imageAvailableSemaphores
+                                             [currentFrame],
+                                             VK_NULL_HANDLE,
+                                             &imageIndex);
 
     if (result == VK_ERROR_OUT_OF_DATE_KHR)
     {
@@ -868,6 +1002,10 @@ private void cleanupSwapChain ()
 private void cleanup ()
 {
     cleanupSwapChain ();
+
+    vkDestroyBuffer (device, vertexBuffer, null);
+
+    vkFreeMemory (device, vertexBufferMemory, null);
 
     for (int i; i < maxFramesInFlight; i++)
     {
@@ -984,20 +1122,54 @@ private VkExtent2D chooseSwapExtent (VkSurfaceCapabilitiesKHR capabilities)
     }
 }
 
-struct QueueFamilyIndices // stfu
+struct QueueFamilyIndices
 {
-    int graphicsFamily = -1; // stfu
-    int presentFamily = -1; // stfu
+    int graphicsFamily = -1;
+    int presentFamily = -1;
 
-    bool isComplete () // stfu
+    bool isComplete ()
     {
         return graphicsFamily >= 0 && presentFamily >= 0;
     }
 }
 
-struct SwapChainSupportDetails // stfu
+struct SwapChainSupportDetails
 {
-    VkSurfaceCapabilitiesKHR capabilities; // stfu
-    VkSurfaceFormatKHR [] formats; // stfu
-    VkPresentModeKHR [] presentModes; // stfu
+    VkSurfaceCapabilitiesKHR capabilities;
+    VkSurfaceFormatKHR [] formats;
+    VkPresentModeKHR [] presentModes;
+}
+
+struct Vertex
+{
+   Vector2 position;
+   Vector3 color;
+
+   static VkVertexInputBindingDescription getBindingDescription ()
+   {
+       VkVertexInputBindingDescription bindingDescription = {};
+
+        bindingDescription.binding = 0;
+        bindingDescription.stride = Vertex.sizeof;
+        bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
+       return bindingDescription;
+   }
+
+   static VkVertexInputAttributeDescription [2] getAttributeDescriptions ()
+   {
+       VkVertexInputAttributeDescription [2] attributeDescriptions;
+
+        attributeDescriptions [0].binding = 0;
+        attributeDescriptions [0].location = 0;
+        attributeDescriptions [0].format = VK_FORMAT_R32G32_SFLOAT;
+        attributeDescriptions [0].offset = position.offsetof;
+
+        attributeDescriptions [1].binding = 0;
+        attributeDescriptions [1].location = 1;
+        attributeDescriptions [1].format = VK_FORMAT_R32G32B32_SFLOAT;
+        attributeDescriptions [1].offset = color.offsetof;
+
+       return attributeDescriptions;
+   }
 }
