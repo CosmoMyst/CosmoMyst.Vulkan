@@ -59,12 +59,16 @@ private VkCommandPool commandPool;
 private VkCommandBuffer [] commandBuffers;
 private VkBuffer vertexBuffer;
 private VkDeviceMemory vertexBufferMemory;
+private VkBuffer indexBuffer;
+private VkDeviceMemory indexBufferMemory;
 
 private size_t currentFrame;
 
 private VkDebugReportCallbackEXT debugCallback;
 
-private Vertex [3] vertices;
+private Vertex [4] vertices;
+
+private ushort [6] indices = [0, 1, 2, 2, 3, 0];
 
 void run () // stfu
 {
@@ -72,9 +76,10 @@ void run () // stfu
     // No clue why this is.
     vertices =
     [
-        Vertex (Vector2 (0.0f, -0.5f), Vector3 (1.0f, 0.0f, 0.0f)),
-        Vertex (Vector2 (0.5f, 0.5f),  Vector3 (0.0f, 1.0f, 0.0f)),
-        Vertex (Vector2 (-0.5f, 0.5f), Vector3 (0.0f, 0.0f, 1.0f))
+        Vertex (Vector2 (-0.5f, -0.5f), Vector3 (1.0f, 0.0f, 0.0f)),
+        Vertex (Vector2 (0.5f, -0.5f),  Vector3 (0.0f, 1.0f, 0.0f)),
+        Vertex (Vector2 (0.5f, 0.5f),   Vector3 (0.0f, 0.0f, 1.0f)),
+        Vertex (Vector2 (-0.5f, 0.5f),  Vector3 (0.4f, 0.1f, 0.9f))
     ];
 
     initWindow ();
@@ -158,9 +163,41 @@ private void initVulkan ()
 
     createVertexBuffer ();
 
+    createIndexBuffer ();
+
     createCommandBuffers ();
 
     createSyncObjects ();
+}
+
+private void createIndexBuffer ()
+{
+    import core.stdc.string : memcpy;
+
+    VkDeviceSize bufferSize = indices [0].sizeof * indices.length;
+
+    VkBuffer stagingBuffer;
+    VkDeviceMemory stagingBufferMemory;
+
+    createBuffer (bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                              VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                              VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                              stagingBuffer, stagingBufferMemory);
+
+    void* data;
+    vkMapMemory (device, stagingBufferMemory, 0, bufferSize, 0, &data);
+    memcpy (data, &indices [0], cast (size_t) bufferSize);
+    vkUnmapMemory (device, stagingBufferMemory);
+
+    createBuffer (bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT |
+                              VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+                              VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+                              indexBuffer, indexBufferMemory);
+
+    copyBuffer (stagingBuffer, indexBuffer, bufferSize);
+
+    vkDestroyBuffer (device, stagingBuffer, null);
+    vkFreeMemory (device, stagingBufferMemory, null);
 }
 
 private void createBuffer (VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties,
@@ -340,7 +377,9 @@ private void createCommandBuffers ()
             VkDeviceSize [1] offsets = [0];
             vkCmdBindVertexBuffers (cmdBuffer, 0, 1, &vertexBuffers [0], &offsets [0]);
 
-            vkCmdDraw (cmdBuffer, cast (uint) vertices.length, 1, 0, 0);
+            vkCmdBindIndexBuffer (cmdBuffer, indexBuffer, 0, VK_INDEX_TYPE_UINT16);
+
+            vkCmdDrawIndexed (cmdBuffer, cast (uint) indices.length, 1, 0, 0, 0);
 
         vkCmdEndRenderPass (cmdBuffer);
 
@@ -1003,8 +1042,10 @@ private void cleanup ()
 {
     cleanupSwapChain ();
 
-    vkDestroyBuffer (device, vertexBuffer, null);
+    vkDestroyBuffer (device, indexBuffer, null);
+    vkFreeMemory (device, indexBufferMemory, null);
 
+    vkDestroyBuffer (device, vertexBuffer, null);
     vkFreeMemory (device, vertexBufferMemory, null);
 
     for (int i; i < maxFramesInFlight; i++)
