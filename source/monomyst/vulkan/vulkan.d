@@ -379,6 +379,10 @@ private void createCommandBuffers ()
 
             vkCmdBindIndexBuffer (cmdBuffer, indexBuffer, 0, VK_INDEX_TYPE_UINT16);
 
+            Vector3 tintColor = Vector3 (0.53f, 0.4f, 0.15f);
+
+            vkCmdPushConstants (cmdBuffer, pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, Vector3.sizeof, &tintColor);
+
             vkCmdDrawIndexed (cmdBuffer, cast (uint) indices.length, 1, 0, 0, 0);
 
         vkCmdEndRenderPass (cmdBuffer);
@@ -548,6 +552,14 @@ private void createGraphicsPipeline ()
     dynamicState.pDynamicStates = &dynamicStates [0];
 
     VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
+    pipelineLayoutInfo.pushConstantRangeCount = 1;
+
+    VkPushConstantRange [1] pushContants;
+    pushContants [0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    pushContants [0].offset = 0;
+    pushContants [0].size = Vector3.sizeof;
+
+    pipelineLayoutInfo.pPushConstantRanges = &pushContants [0];
 
     vkCreatePipelineLayout (device, &pipelineLayoutInfo, null, &pipelineLayout).enforceVk;
 
