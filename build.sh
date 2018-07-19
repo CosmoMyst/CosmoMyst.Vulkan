@@ -1,4 +1,2 @@
-if [ ! -d "builds" ]; then
-    mkdir builds
-fi
-dub build
+./compileShaders.sh
+dub build --arch=x86_64

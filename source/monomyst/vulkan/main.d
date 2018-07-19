@@ -1,4 +1,4 @@
-module monomyst.vulkan;
+module monomyst.vulkan.main;
 
 import erupted;
 import std.conv;
@@ -13,9 +13,10 @@ import derelict.glfw3;
 import std.file : getcwd;
 import core.stdc.string : strcmp;
 import erupted.vulkan_lib_loader;
-import monomyst.math.vector2;
-import monomyst.math.vector3;
+import monomyst.math;
 import std.datetime.stopwatch;
+import monomyst.vulkan.window;
+import monomyst.vulkan.vk_helpers;
 
 mixin DerelictGLFW3_VulkanBind;
 
@@ -37,9 +38,6 @@ private VkSemaphore [] imageAvailableSemaphores;
 private VkSemaphore [] renderFinishedSemaphores;
 private VkFence [] inFlightFences;
 
-private bool frameBufferResized;
-
-private GLFWwindow* window;
 private VkInstance instance;
 private VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
 private VkDevice device;
@@ -61,6 +59,9 @@ private VkBuffer vertexBuffer;
 private VkDeviceMemory vertexBufferMemory;
 private VkBuffer indexBuffer;
 private VkDeviceMemory indexBufferMemory;
+private VkDescriptorSetLayout descriptorSetLayout;
+private VkBuffer [] uniformBuffers;
+private VkDeviceMemory [] uniformBuffersMemory;
 
 private size_t currentFrame;
 
@@ -70,8 +71,12 @@ private Vertex [4] vertices;
 
 private ushort [6] indices = [0, 1, 2, 2, 3, 0];
 
+private Window window;
+
 void run () // stfu
 {
+    startTime = MonoTime.currTime;
+
     // NOTE: This should be in the module (outside of a function) but then all components are nan.
     // No clue why this is.
     vertices =
@@ -82,10 +87,22 @@ void run () // stfu
         Vertex (Vector2 (-0.5f, 0.5f),  Vector3 (0.4f, 0.1f, 0.9f))
     ];
 
-    initWindow ();
+
+    window = new Window ("MonoMyst.Vulkan", width, height);
+    window.setWindowUserPointer (&window);
+    window.setFramebufferSizeCallback (&framebufferSizeCallback);
+    
     initVulkan ();
     mainLoop ();
     cleanup ();
+}
+
+extern (C)
+private void framebufferSizeCallback (GLFWwindow* glfwWindow, int width, int height) nothrow
+{
+    const void* data = glfwGetWindowUserPointer (glfwWindow);
+    Window w = cast (Window) data;
+    w.frameBufferResized = true;
 }
 
 extern (System)
@@ -105,34 +122,6 @@ private static VkBool32 vulkanDebugCallback (VkDebugReportFlagsEXT flags, VkDebu
 	}
 
 	return VK_FALSE;
-}
-
-private void initWindow ()
-{
-	DerelictGLFW3.load ();
-
-    DerelictGLFW3_loadVulkan ();
-
-    glfwInit ();
-
-    glfwWindowHint (GLFW_CLIENT_API, GLFW_NO_API);
-
-    window = glfwCreateWindow (width, height, "MonoMyst.Vulkan", null, null);
-
-    // glfwSetWindowUserPointer (window, this);
-
-    glfwSetFramebufferSizeCallback (window, &frameBufferResizeCallback);
-}
-
-extern (C)
-private void frameBufferResizeCallback (GLFWwindow* window, int width, int height) nothrow
-{
-    frameBufferResized = true;
-}
-
-private void enforceVk (VkResult result)
-{
-    enforce (result == VkResult.VK_SUCCESS, result.to!string);
 }
 
 private void initVulkan ()
@@ -155,6 +144,8 @@ private void initVulkan ()
 
     createRenderPass ();
 
+    createDescriptorSetLayout ();
+
     createGraphicsPipeline ();
 
     createFramebuffers ();
@@ -165,9 +156,51 @@ private void initVulkan ()
 
     createIndexBuffer ();
 
+    createUniformBuffer ();
+
     createCommandBuffers ();
 
     createSyncObjects ();
+}
+
+private StopWatch sw = StopWatch (AutoStart.no);
+private MonoTime startTime;
+
+private void updateUniformBuffer ()
+{
+    auto currentTime = MonoTime.currTime;
+
+    auto time = currentTime - startTime;
+    float timeF = time.total!"seconds";
+}
+
+private void createUniformBuffer ()
+{
+    VkDeviceSize bufferSize = UniformBufferObject.sizeof;
+
+    uniformBuffers.length = swapChainImages.length;
+    uniformBuffersMemory.length = swapChainImages.length;
+
+    for (int i; i < swapChainImages.length; i++)
+    {
+        createBuffer (bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, uniformBuffers [i], uniformBuffersMemory [i]);
+    }
+}
+
+private void createDescriptorSetLayout ()
+{
+    VkDescriptorSetLayoutBinding uboLayoutBinding = {};
+    uboLayoutBinding.binding = 0;
+    uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    uboLayoutBinding.descriptorCount = 1;
+    uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
+    VkDescriptorSetLayoutCreateInfo layoutInfo = {};
+    layoutInfo.bindingCount = 1;
+    layoutInfo.pBindings = &uboLayoutBinding;
+
+    vkAssert (vkCreateDescriptorSetLayout (device, &layoutInfo, null, &descriptorSetLayout),
+              "Failed to create a descriptor layout");
 }
 
 private void createIndexBuffer ()
@@ -208,7 +241,8 @@ private void createBuffer (VkDeviceSize size, VkBufferUsageFlags usage, VkMemory
     bufferInfo.usage = usage;
     bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-    vkCreateBuffer (device, &bufferInfo, null, &buffer).enforceVk;
+    vkAssert (vkCreateBuffer (device, &bufferInfo, null, &buffer),
+              "Failed to create a buffer");
 
     VkMemoryRequirements memRequirements;
     vkGetBufferMemoryRequirements (device, buffer, &memRequirements);
@@ -217,7 +251,8 @@ private void createBuffer (VkDeviceSize size, VkBufferUsageFlags usage, VkMemory
     allocInfo.allocationSize = memRequirements.size;
     allocInfo.memoryTypeIndex = findMemoryType (memRequirements.memoryTypeBits, properties);
 
-    vkAllocateMemory (device, &allocInfo, null, &bufferMemory).enforceVk;
+    vkAssert (vkAllocateMemory (device, &allocInfo, null, &bufferMemory),
+              "Failed to allocate buffer memory");
 
     vkBindBufferMemory (device, buffer, bufferMemory, 0);
 }
@@ -303,8 +338,8 @@ private void recreateSwapCain ()
     int eheight = 0;
     while (ewidth == 0 || eheight == 0)
     {
-        glfwGetFramebufferSize (window, &ewidth, &eheight);
-        glfwWaitEvents ();
+        window.getFramebufferSize (&ewidth, &eheight);
+        window.waitEvents ();
     }
 
     vkDeviceWaitIdle (device);
@@ -332,9 +367,12 @@ private void createSyncObjects ()
 
     for (int i; i < maxFramesInFlight; i++)
     {
-        vkCreateSemaphore (device, &semaphoreInfo, null, &imageAvailableSemaphores [i]).enforceVk;
-        vkCreateSemaphore (device, &semaphoreInfo, null, &renderFinishedSemaphores [i]).enforceVk;
-        vkCreateFence (device, &fenceInfo, null, &inFlightFences [i]).enforceVk;
+        vkAssert (vkCreateSemaphore (device, &semaphoreInfo, null, &imageAvailableSemaphores [i]),
+                  "Failed to create a semaphore");
+        vkAssert (vkCreateSemaphore (device, &semaphoreInfo, null, &renderFinishedSemaphores [i]),
+                  "Failed to create a semaphore");
+        vkAssert (vkCreateFence (device, &fenceInfo, null, &inFlightFences [i]),
+                  "Failed to create a fence");
     }
 }
 
@@ -347,14 +385,16 @@ private void createCommandBuffers ()
     allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     allocInfo.commandBufferCount = cast (uint) commandBuffers.length;
 
-    vkAllocateCommandBuffers (device, &allocInfo, &commandBuffers [0]).enforceVk;
+    vkAssert (vkAllocateCommandBuffers (device, &allocInfo, &commandBuffers [0]),
+              "Failed to allocate command buffers");
 
     foreach (size_t i, cmdBuffer; commandBuffers)
     {
         VkCommandBufferBeginInfo beginInfo = {};
         beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
 
-        vkBeginCommandBuffer (cmdBuffer, &beginInfo).enforceVk;
+        vkAssert (vkBeginCommandBuffer (cmdBuffer, &beginInfo),
+                  "Failed to begin a command buffer");
 
         VkRenderPassBeginInfo renderPassInfo = {};
         renderPassInfo.renderPass = renderPass;
@@ -387,7 +427,8 @@ private void createCommandBuffers ()
 
         vkCmdEndRenderPass (cmdBuffer);
 
-        vkEndCommandBuffer (cmdBuffer).enforceVk;
+        vkAssert (vkEndCommandBuffer (cmdBuffer),
+                  "Failed to end a command buffer");
     }
 }
 
@@ -398,7 +439,8 @@ private void createCommandPool ()
     VkCommandPoolCreateInfo poolInfo = {};
     poolInfo.queueFamilyIndex = indices.graphicsFamily;
 
-    vkCreateCommandPool (device, &poolInfo, null, &commandPool).enforceVk;
+    vkAssert (vkCreateCommandPool (device, &poolInfo, null, &commandPool),
+              "Failed to create a command pool");
 }
 
 private void createFramebuffers ()
@@ -417,7 +459,8 @@ private void createFramebuffers ()
         framebufferInfo.height = swapChainExtent.height;
         framebufferInfo.layers = 1;
 
-        vkCreateFramebuffer (device, &framebufferInfo, null, &swapChainFramebuffers [i]).enforceVk;
+        vkAssert (vkCreateFramebuffer (device, &framebufferInfo, null, &swapChainFramebuffers [i]),
+                  "Failed to create a framebuffer");
     }
 }
 
@@ -459,7 +502,8 @@ private void createRenderPass ()
     renderPassInfo.dependencyCount = 1;
     renderPassInfo.pDependencies = &dependency;
 
-    vkCreateRenderPass (device, &renderPassInfo, null, &renderPass).enforceVk;
+    vkAssert (vkCreateRenderPass (device, &renderPassInfo, null, &renderPass),
+              "Failed to create a render pass");
 }
 
 private void createGraphicsPipeline ()
@@ -553,6 +597,8 @@ private void createGraphicsPipeline ()
 
     VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
     pipelineLayoutInfo.pushConstantRangeCount = 1;
+    pipelineLayoutInfo.setLayoutCount = 1;
+    pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout;
 
     VkPushConstantRange [1] pushContants;
     pushContants [0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
@@ -561,7 +607,8 @@ private void createGraphicsPipeline ()
 
     pipelineLayoutInfo.pPushConstantRanges = &pushContants [0];
 
-    vkCreatePipelineLayout (device, &pipelineLayoutInfo, null, &pipelineLayout).enforceVk;
+    vkAssert (vkCreatePipelineLayout (device, &pipelineLayoutInfo, null, &pipelineLayout),
+              "Failed to create a pipeline layout");
 
     VkGraphicsPipelineCreateInfo pipelineInfo = {};
     pipelineInfo.stageCount = 2;
@@ -578,7 +625,8 @@ private void createGraphicsPipeline ()
     pipelineInfo.renderPass = renderPass;
     pipelineInfo.subpass = 0;
 
-    vkCreateGraphicsPipelines (device, VK_NULL_HANDLE, 1, &pipelineInfo, null, &graphicsPipeline).enforceVk;
+    vkAssert (vkCreateGraphicsPipelines (device, VK_NULL_HANDLE, 1, &pipelineInfo, null, &graphicsPipeline),
+              "Failed to create a graphics pipeline");
 
     vkDestroyShaderModule (device, fragShaderModule, null);
     vkDestroyShaderModule (device, vertShaderModule, null);
@@ -591,7 +639,8 @@ private VkShaderModule createShaderModule (ubyte [] code)
     createInfo.pCode = cast (uint*) code.ptr;
 
     VkShaderModule shaderModule;
-    vkCreateShaderModule (device, &createInfo, null, &shaderModule).enforceVk;
+    vkAssert (vkCreateShaderModule (device, &createInfo, null, &shaderModule),
+              "Failed to create a shader module");
 
     return shaderModule;
 }
@@ -616,7 +665,8 @@ private void createImageViews ()
         createInfo.subresourceRange.baseArrayLayer = 0;
         createInfo.subresourceRange.layerCount = 1;
 
-        vkCreateImageView (device, &createInfo, null, &swapChainImageViews [i]).enforceVk;
+        vkAssert (vkCreateImageView (device, &createInfo, null, &swapChainImageViews [i]),
+                  "Failed to create an image view");
     }
 }
 
@@ -664,7 +714,8 @@ private void createSwapChain ()
     createInfo.clipped = VK_TRUE;
     createInfo.oldSwapchain = VK_NULL_HANDLE;
 
-    vkCreateSwapchainKHR (device, &createInfo, null, &swapChain).enforceVk;
+    vkAssert (vkCreateSwapchainKHR (device, &createInfo, null, &swapChain),
+              "Failed to create a swapchain");
 
     vkGetSwapchainImagesKHR (device, swapChain, &imageCount, null);
     swapChainImages.length = imageCount;
@@ -673,7 +724,7 @@ private void createSwapChain ()
 
 private void createSurface ()
 {
-    glfwCreateWindowSurface (instance, window, null, &surface).enforceVk;
+    window.createSurface (instance, &surface);
 }
 
 private void pickPhysicalDevice ()
@@ -750,7 +801,8 @@ private void createLogicalDevice ()
         deviceInfo.enabledLayerCount = 0;
     }
 
-    vkCreateDevice (physicalDevice, &deviceInfo, null, &device).enforceVk;
+    vkAssert (vkCreateDevice (physicalDevice, &deviceInfo, null, &device),
+              "Failed to create a device");
 
     loadDeviceLevelFunctions (device);
 
@@ -837,7 +889,7 @@ private void createInstance ()
     VkInstanceCreateInfo createInfo = {};
     createInfo.pApplicationInfo = &appInfo;
 
-    string [] extensions = getRequiredExtensions ();
+    string [] extensions = window.getRequiredExtensions ();
 
     const (char)* [] extPtrs;
     foreach (e; extensions)
@@ -860,7 +912,8 @@ private void createInstance ()
         createInfo.enabledLayerCount = 0;
     }
 
-    vkCreateInstance (&createInfo, null, &instance).enforceVk;
+    vkAssert (vkCreateInstance (&createInfo, null, &instance),
+              "Failed to create an instance");
 
     loadInstanceLevelFunctions (instance);
 }
@@ -873,7 +926,8 @@ private void setupDebugCallback ()
     createInfo.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT;
     createInfo.pfnCallback = assumeNoGC (&vulkanDebugCallback);
 
-    createDebugReportCallbackEXT (instance, &createInfo, null, &debugCallback).enforceVk;
+    vkAssert (createDebugReportCallbackEXT (instance, &createInfo, null, &debugCallback),
+              "Failed to create a debug report callback");
 }
 
 private static VkResult createDebugReportCallbackEXT (VkInstance instance,
@@ -933,32 +987,18 @@ private bool checkValidationLayerSupport ()
     return true;
 }
 
-private string [] getRequiredExtensions ()
-{
-    string [] extensions;
-
-    uint glfwExtensionCount;
-    const char** glfwExtensions = glfwGetRequiredInstanceExtensions (&glfwExtensionCount);
-
-    extensions.length = glfwExtensionCount;
-
-    for (int i; i < glfwExtensionCount; i++)
-    {
-        extensions [i] = glfwExtensions [i].to!string;
-    }
-
-    if (enableValidationLayers)
-        extensions ~= VK_EXT_DEBUG_REPORT_EXTENSION_NAME;
-
-    return extensions;
-}
-
 private void mainLoop ()
 {
-    while (!glfwWindowShouldClose (window))
+    while (!window.shouldClose)
     {
-        glfwPollEvents ();
+        auto startTime = MonoTime.currTime;
+        window.pollEvents ();
         drawFrame ();
+        auto endTime = MonoTime.currTime;
+
+        auto frame = endTime - startTime;
+        float dt = frame.total!"hnsecs" * 0.0000001;
+        writeln (cast (long) (1.0f / dt));
     }
 
     vkDeviceWaitIdle (device);
@@ -987,6 +1027,8 @@ private void drawFrame ()
         throw new Exception ("Failed to acquire swap chain image.");
     }
 
+    updateUniformBuffer ();
+
     VkSubmitInfo submitInfo = {};
 
     VkSemaphore [1] waitSemaphores = [imageAvailableSemaphores [currentFrame]];
@@ -1004,7 +1046,8 @@ private void drawFrame ()
     submitInfo.signalSemaphoreCount = 1;
     submitInfo.pSignalSemaphores = &signalSemaphores [0];
 
-    vkQueueSubmit (graphicsQueue, 1, &submitInfo, inFlightFences [currentFrame]).enforceVk;
+    vkAssert (vkQueueSubmit (graphicsQueue, 1, &submitInfo, inFlightFences [currentFrame]),
+              "Failed to submit a queue");
 
     VkPresentInfoKHR presentInfo = {};
     presentInfo.waitSemaphoreCount = 1;
@@ -1018,10 +1061,10 @@ private void drawFrame ()
 
     result = vkQueuePresentKHR (presentQueue, &presentInfo);
 
-    if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || frameBufferResized)
+    if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || window.frameBufferResized)
     {
         recreateSwapCain ();
-        frameBufferResized = false;
+        window.frameBufferResized = false;
     }
     else if (result != VK_SUCCESS)
     {
@@ -1054,6 +1097,14 @@ private void cleanup ()
 {
     cleanupSwapChain ();
 
+    vkDestroyDescriptorSetLayout (device, descriptorSetLayout, null);
+
+    for (int i; i < swapChainImages.length; i++)
+    {
+        vkDestroyBuffer (device, uniformBuffers [i], null);
+        vkFreeMemory (device, uniformBuffersMemory [i], null);
+    }
+
     vkDestroyBuffer (device, indexBuffer, null);
     vkFreeMemory (device, indexBufferMemory, null);
 
@@ -1077,8 +1128,7 @@ private void cleanup ()
     vkDestroySurfaceKHR (instance, surface, null);
     vkDestroyInstance (instance, null);
 
-    glfwDestroyWindow (window);
-    glfwTerminate ();
+    window.destroy ();
 }
 
 private auto assumeNoGC (T) (T t) nothrow if (isFunctionPointer!T || isDelegate!T)
@@ -1160,7 +1210,7 @@ private VkExtent2D chooseSwapExtent (VkSurfaceCapabilitiesKHR capabilities)
     {
         int ewidth;
         int eheight;
-        glfwGetFramebufferSize (window, &ewidth, &eheight);
+        window.getFramebufferSize (&ewidth, &eheight);
 
         VkExtent2D actualExtent = {};
         actualExtent.width = width;
@@ -1225,4 +1275,11 @@ struct Vertex
 
        return attributeDescriptions;
    }
+}
+
+struct UniformBufferObject
+{
+    Matrix4x4 model;
+    Matrix4x4 view;
+    Matrix4x4 projection;
 }
