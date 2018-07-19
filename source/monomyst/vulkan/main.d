@@ -18,13 +18,6 @@ import std.datetime.stopwatch;
 import monomyst.vulkan.window;
 import monomyst.vulkan.vk_helpers;
 
-mixin DerelictGLFW3_VulkanBind;
-
-debug
-    private const bool enableValidationLayers = true;
-else
-    private const bool enableValidationLayers;
-
 private const string [1] validationLayers = ["VK_LAYER_LUNARG_standard_validation"];
 
 private const string [1] deviceExtensions = [VK_KHR_SWAPCHAIN_EXTENSION_NAME];
@@ -787,7 +780,7 @@ private void createLogicalDevice ()
 
     deviceInfo.ppEnabledExtensionNames = &extensionNames [0];
 
-    if (enableValidationLayers)
+    debug
     {
         const (char)* [] layers;
         foreach (l; validationLayers)
@@ -876,8 +869,8 @@ private QueueFamilyIndices findQueueFamilies (VkPhysicalDevice device)
 
 private void createInstance ()
 {
-    if (enableValidationLayers && !checkValidationLayerSupport)
-        throw new Exception ("Validation layers are enabled but there's no support for them.");
+    debug
+        assert (checkValidationLayerSupport, "Validation layers are enabled but there's no support for them.");
 
     VkApplicationInfo appInfo = {};
     appInfo.pApplicationName = "MonoMyst.Vulkan";
@@ -898,7 +891,7 @@ private void createInstance ()
     createInfo.enabledExtensionCount = cast (uint) extensions.length;
     createInfo.ppEnabledExtensionNames = &extPtrs [0];
 
-    if (enableValidationLayers)
+    debug
     {
         const (char)* [] layers;
         foreach (l; validationLayers)
@@ -920,14 +913,15 @@ private void createInstance ()
 
 private void setupDebugCallback ()
 {
-    if (!enableValidationLayers) return;
+    debug
+    {
+        VkDebugReportCallbackCreateInfoEXT createInfo = {};
+        createInfo.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT;
+        createInfo.pfnCallback = assumeNoGC (&vulkanDebugCallback);
 
-    VkDebugReportCallbackCreateInfoEXT createInfo = {};
-    createInfo.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT;
-    createInfo.pfnCallback = assumeNoGC (&vulkanDebugCallback);
-
-    vkAssert (createDebugReportCallbackEXT (instance, &createInfo, null, &debugCallback),
-              "Failed to create a debug report callback");
+        vkAssert (createDebugReportCallbackEXT (instance, &createInfo, null, &debugCallback),
+                "Failed to create a debug report callback");
+    }
 }
 
 private static VkResult createDebugReportCallbackEXT (VkInstance instance,
@@ -1122,7 +1116,7 @@ private void cleanup ()
 
     vkDestroyDevice (device, null);
 
-    if (enableValidationLayers)
+    debug
         destroyDebugReportCallbackEXT (instance, debugCallback, null);
 
     vkDestroySurfaceKHR (instance, surface, null);
