@@ -79,6 +79,9 @@ package class Window
 
         window = glfwCreateWindow (width, height, title.toStringz, null, null);
 
+        glfwSetWindowUserPointer (window, cast (void*) this);
+        glfwSetFramebufferSizeCallback (window, &framebufferSizeCallback);
+
         this.title = title;
         this.width = width;
         this.height = height;
@@ -107,16 +110,6 @@ package class Window
             extensions ~= VK_EXT_DEBUG_REPORT_EXTENSION_NAME;
 
         return extensions;
-    }
-
-    /++
-        This function sets the user-defined pointer of the specified window.
-        The current value is retained until the window is destroyed.
-        The initial value is NULL.
-    +/
-    void setWindowUserPointer (void* ptr)
-    {
-        glfwSetWindowUserPointer (window, ptr);
     }
 
     /++
@@ -176,4 +169,12 @@ package class Window
         glfwDestroyWindow (window);
         glfwTerminate ();
     }
+}
+
+extern (C)
+private void framebufferSizeCallback (GLFWwindow* glfwWindow, int width, int height) nothrow
+{
+    const void* data = glfwGetWindowUserPointer (glfwWindow);
+    Window w = cast (Window) data; // stfu
+    w.frameBufferResized = true;
 }

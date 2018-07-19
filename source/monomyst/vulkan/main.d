@@ -82,20 +82,10 @@ void run () // stfu
 
 
     window = new Window ("MonoMyst.Vulkan", width, height);
-    window.setWindowUserPointer (&window);
-    window.setFramebufferSizeCallback (&framebufferSizeCallback);
     
     initVulkan ();
     mainLoop ();
     cleanup ();
-}
-
-extern (C)
-private void framebufferSizeCallback (GLFWwindow* glfwWindow, int width, int height) nothrow
-{
-    const void* data = glfwGetWindowUserPointer (glfwWindow);
-    Window w = cast (Window) data;
-    w.frameBufferResized = true;
 }
 
 extern (System)
