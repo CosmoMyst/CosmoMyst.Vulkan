@@ -1,11 +1,10 @@
-import monomyst.vulkan;
+import monomyst.core.window;
 
 void main ()
 {
-	Window window = new Window (800, 600, "MonoMyst.Vulkan");
+	import std.stdio : readln;
 
-	while (window.shouldClose == false)
-	{
-		window.pollEvents ();
-	}
+    Window window = new Window ();
+
+	readln ();
 }

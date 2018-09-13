@@ -2,3 +2,6 @@
 	path = MonoMyst.Math
 	url = git@github.com:MonoMyst/MonoMyst.Math.git
 	branch = master
+[submodule "MonoMyst.Core"]
+	path = MonoMyst.Core
+	url = git@github.com:MonoMyst/MonoMyst.Core.git

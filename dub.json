@@ -6,7 +6,7 @@
 	"dependencies": {
 		"erupted": "~>2.0.4",
 		"monomyst-math": { "path": "MonoMyst.Math/" },
-		"derelict-sdl2": "~>3.1.0-alpha.4"
+		"monomyst-core": { "path": "MonoMyst.Core/" }
 	},
 	"description": "A Vulkan renderer written in D.",
 	"copyright": "Copyright © 2018, CodeMyst",
