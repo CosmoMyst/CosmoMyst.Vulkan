@@ -4,6 +4,7 @@ import erupted;
 import erupted.vulkan_lib_loader;
 
 import monomyst.vulkan.helpers;
+import monomyst.vulkan.layers;
 
 public class Instance
 {
@@ -14,6 +15,9 @@ public class Instance
         import std.stdio : writeln;
 
         assert (loadGlobalLevelFunctions (), "Couldn't load global level functions for Vulkan.");
+
+        debug
+            assert (checkValidationLayerSupport (), "There is no support for validation layers.");
 
         const (VkApplicationInfo) appInfo =
         {
@@ -26,9 +30,11 @@ public class Instance
 
         const (VkInstanceCreateInfo) instanceCreateInfo =
         {
-            pApplicationInfo: &appInfo
+            pApplicationInfo: &appInfo,
         };
 
         vkAssert (vkCreateInstance (&instanceCreateInfo, null, &instance), "Failed to create a Vulkan instance.");
+
+        loadInstanceLevelFunctions (instance);
     }
 }
