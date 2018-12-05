@@ -1,5 +1,6 @@
-import monomyst.vulkan.instance;
 import monomyst.vulkan.device;
+import monomyst.vulkan.instance;
+import monomyst.vulkan.presenter;
 
 void main ()
 {
@@ -9,10 +10,15 @@ void main ()
     Window window = new Window ();
 
 	Instance instance = new Instance ();
+	Presenter presenter = new Presenter (instance.vkInstance, window);
 	Device device = new Device (instance.vkInstance);
 
 	while (!window.shouldClose)
 	{
 		window.pollEvents ();
 	}
+
+	device.cleanup ();
+	presenter.cleanup ();
+	instance.cleanup ();
 }

@@ -120,7 +120,7 @@ public class Device
         return indices;
     }
 
-    ~this ()
+    void cleanup ()
     {
         vkDestroyDevice (device, null);
     }

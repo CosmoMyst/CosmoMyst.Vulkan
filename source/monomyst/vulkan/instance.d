@@ -63,6 +63,9 @@ public class Instance
     {
         string [] extensions;
 
+        extensions ~= VK_KHR_SURFACE_EXTENSION_NAME;
+        extensions ~= "VK_KHR_xcb_surface";
+
         debug
             extensions ~= VK_EXT_DEBUG_REPORT_EXTENSION_NAME;
 
@@ -84,7 +87,7 @@ public class Instance
         }
     }
 
-    ~this ()
+    void cleanup ()
     {
         debug
             destroyDebugReportCallbackEXT (instance, debugCallback, null);
