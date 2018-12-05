@@ -4,7 +4,7 @@ import std.typecons;
 
 struct QueueFamilyIndices
 {
-    Nullable!ulong graphicsFamily;
+    Nullable!uint graphicsFamily;
 
     bool isComplete ()
     {

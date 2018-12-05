@@ -42,7 +42,7 @@ public class Instance
 
         debug
         {
-            auto validationLayers = VK_STANDARD_VALIDATION_LAYER_NAME.toVulkanArray;
+            auto validationLayers = getValidationLayers ();
 
             instanceCreateInfo.enabledLayerCount = cast (uint) validationLayers.length;
             instanceCreateInfo.ppEnabledLayerNames = &validationLayers [0];

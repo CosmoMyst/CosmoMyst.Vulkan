@@ -5,12 +5,12 @@ import erupted;
 /++
     Vulkan standard validation layer name.
 +/
-public enum VK_STANDARD_VALIDATION_LAYER_NAME = "VK_LAYER_LUNARG_standard_validation"; 
+enum VK_STANDARD_VALIDATION_LAYER_NAME = "VK_LAYER_LUNARG_standard_validation"; 
 
 /++
     Checks if validation layers are supported.
 +/
-public bool checkValidationLayerSupport ()
+bool checkValidationLayerSupport ()
 {
     import core.stdc.string : strcmp;
 
@@ -31,4 +31,11 @@ public bool checkValidationLayerSupport ()
     }
 
     return false;
+}
+
+const (char)* [] getValidationLayers ()
+{
+    import monomyst.vulkan.helpers : toVulkanArray;
+
+    return VK_STANDARD_VALIDATION_LAYER_NAME.toVulkanArray;
 }
