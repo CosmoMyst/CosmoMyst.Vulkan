@@ -1,4 +1,5 @@
 import monomyst.vulkan.instance;
+import monomyst.vulkan.device;
 
 void main ()
 {
@@ -8,6 +9,7 @@ void main ()
     Window window = new Window ();
 
 	Instance instance = new Instance ();
+	Device device = new Device (instance.vkInstance);
 
 	while (!window.shouldClose)
 	{

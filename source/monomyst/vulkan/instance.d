@@ -8,6 +8,7 @@ import monomyst.vulkan.helpers;
 
 public class Instance
 {
+    @property public VkInstance vkInstance () { return instance; }
     private VkInstance instance;
     private VkDebugReportCallbackEXT debugCallback;
 
