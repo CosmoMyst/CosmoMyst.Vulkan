@@ -1,13 +1,16 @@
-import monomyst.core.window;
 import monomyst.vulkan.instance;
 
 void main ()
 {
 	import std.stdio : readln;
+	import monomyst.core : Window;
 
     Window window = new Window ();
 
 	Instance instance = new Instance ();
 
-	readln ();
+	while (!window.shouldClose)
+	{
+		window.pollEvents ();
+	}
 }

@@ -4,10 +4,10 @@
 		"derelict-glfw3": "4.0.0-beta.1",
 		"derelict-sdl2": "3.1.0-alpha.4",
 		"derelict-util": "3.0.0-beta.2",
-		"erupted": "2.0.9+v1.1.83",
-		"intel-intrinsics": "1.0.11",
+		"erupted": "2.0.17+v1.1.94",
+		"intel-intrinsics": "1.0.13",
 		"monomyst-core": {"path":"MonoMyst.Core/"},
 		"monomyst-math": {"path":"MonoMyst.Math/"},
-		"xcb-d": "2.1.0+1.11.1"
+		"xcb-d": "2.1.1+1.11.1"
 	}
 }
