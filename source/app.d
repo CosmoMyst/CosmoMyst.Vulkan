@@ -11,7 +11,7 @@ void main ()
 
 	Instance instance = new Instance ();
 	Presenter presenter = new Presenter (instance.vkInstance, window);
-	Device device = new Device (instance.vkInstance);
+	Device device = new Device (instance.vkInstance, presenter.vkSurface);
 
 	while (!window.shouldClose)
 	{

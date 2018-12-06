@@ -10,6 +10,7 @@ mixin Platform_Extensions!USE_PLATFORM_XCB_KHR;
 
 class Presenter
 {
+    @property VkSurfaceKHR vkSurface () { return surface; }
     private VkSurfaceKHR surface;
     private VkInstance instance;
 
