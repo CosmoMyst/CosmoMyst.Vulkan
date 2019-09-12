@@ -1,10 +1,10 @@
-module monomyst.vulkan.presenter;
+module cosmomyst.vulkan.presenter;
 
 import erupted;
 import erupted.platform_extensions;
 import xcb.xcb;
-import monomyst.core;
-import monomyst.vulkan.helpers;
+import cosmomyst.core;
+import cosmomyst.vulkan.helpers;
 
 mixin Platform_Extensions!USE_PLATFORM_XCB_KHR;
 
@@ -14,14 +14,14 @@ class Presenter
     private VkSurfaceKHR surface;
     private VkInstance instance;
 
-    this (VkInstance instance, Window window)
+    this (VkInstance instance, XCBWindow window)
     {
         this.instance = instance;
 
         VkXcbSurfaceCreateInfoKHR createInfo =
         {
-            connection: window.xcbconnection,
-            window: window.xcbwindow
+            connection: window.connection,
+            window: window.window
         };
 
         auto createXcbSurfaceKHR = cast (PFN_vkCreateXcbSurfaceKHR) vkGetInstanceProcAddr (instance, "vkCreateXcbSurfaceKHR");

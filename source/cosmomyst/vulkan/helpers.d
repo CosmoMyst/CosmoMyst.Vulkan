@@ -1,4 +1,4 @@
-module monomyst.vulkan.helpers;
+module cosmomyst.vulkan.helpers;
 
 import erupted;
 import std.traits;
@@ -16,7 +16,7 @@ public auto assumeNoGC (T) (T t) nothrow if (isFunctionPointer!T || isDelegate!T
 	return cast (SetFunctionAttributes! (T, functionLinkage!T, attrs)) t;
 }
 
-public const (char)* [] toVulkanArray (string [] array)
+public const (char)* [] toVulkanArray (const string [] array)
 {
     const (char)* [] res;
     foreach (e; array)
@@ -25,7 +25,7 @@ public const (char)* [] toVulkanArray (string [] array)
     return res;
 }
 
-public const (char)* [] toVulkanArray (string element)
+public const (char)* [] toVulkanArray (const string element)
 {
     return toVulkanArray ([ element ]);
 }

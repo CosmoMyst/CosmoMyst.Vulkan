@@ -1,4 +1,4 @@
-module monomyst.vulkan.layers;
+module cosmomyst.vulkan.layers;
 
 import erupted;
 
@@ -35,7 +35,7 @@ bool checkValidationLayerSupport ()
 
 const (char)* [] getValidationLayers ()
 {
-    import monomyst.vulkan.helpers : toVulkanArray;
+    import cosmomyst.vulkan.helpers : toVulkanArray;
 
     return VK_STANDARD_VALIDATION_LAYER_NAME.toVulkanArray;
 }

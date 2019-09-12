@@ -1,4 +1,4 @@
-module monomyst.vulkan.queues;
+module cosmomyst.vulkan.queues;
 
 import std.typecons;
 

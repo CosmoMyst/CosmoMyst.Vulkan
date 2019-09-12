@@ -1,13 +1,13 @@
 {
-	"name": "monomyst-vulkan",
+	"name": "cosmomyst-vulkan",
 	"authors": [
 		"CodeMyst"
 	],
 	"dependencies": {
 		"erupted": "~>2.0.4",
 		"xcb-d": "~>2.1.0+1.11.1",
-		"monomyst-math": { "path": "MonoMyst.Math/" },
-		"monomyst-core": { "path": "MonoMyst.Core/" }
+		"cosmomyst-math": { "path": "CosmoMyst.Math/" },
+		"cosmomyst-core": { "path": "CosmoMyst.Core/" }
 	},
 	"description": "A Vulkan renderer written in D.",
 	"copyright": "Copyright © 2018, CodeMyst",

@@ -1,10 +1,10 @@
-module monomyst.vulkan.instance;
+module cosmomyst.vulkan.instance;
 
 import erupted;
 import erupted.vulkan_lib_loader;
 
-import monomyst.vulkan.layers;
-import monomyst.vulkan.helpers;
+import cosmomyst.vulkan.layers;
+import cosmomyst.vulkan.helpers;
 
 public class Instance
 {
@@ -27,8 +27,8 @@ public class Instance
             apiVersion: VK_MAKE_VERSION (1, 1, 8),
             applicationVersion: VK_MAKE_VERSION (0, 1, 0),
             engineVersion: VK_MAKE_VERSION (0, 1, 0),
-            pApplicationName: "MonoMyst",
-            pEngineName: "MonoMyst",
+            pApplicationName: "CosmoMyst",
+            pEngineName: "CosmoMyst",
         };
 
         auto extensions = getRequiredExtensions ().toVulkanArray;

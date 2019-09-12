@@ -1,7 +1,6 @@
-[submodule "MonoMyst.Math"]
-	path = MonoMyst.Math
-	url = git@github.com:MonoMyst/MonoMyst.Math.git
-	branch = master
-[submodule "MonoMyst.Core"]
-	path = MonoMyst.Core
-	url = git@github.com:MonoMyst/MonoMyst.Core.git
+[submodule "CosmoMyst.Core"]
+	path = CosmoMyst.Core
+	url = git@github.com:CosmoMyst/CosmoMyst.Core.git
+[submodule "CosmoMyst.Math"]
+	path = CosmoMyst.Math
+	url = git@github.com:CosmoMyst/CosmoMyst.Math.git

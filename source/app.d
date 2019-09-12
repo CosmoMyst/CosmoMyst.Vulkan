@@ -1,19 +1,19 @@
-import monomyst.vulkan.device;
-import monomyst.vulkan.instance;
-import monomyst.vulkan.presenter;
+import cosmomyst.vulkan.device;
+import cosmomyst.vulkan.instance;
+import cosmomyst.vulkan.presenter;
 
 void main ()
 {
 	import std.stdio : readln;
-	import monomyst.core : Window;
+	import cosmomyst.core : XCBWindow;
 
-    Window window = new Window ();
+    XCBWindow window = new XCBWindow (400, 400);
 
 	Instance instance = new Instance ();
 	Presenter presenter = new Presenter (instance.vkInstance, window);
-	Device device = new Device (instance.vkInstance, presenter.vkSurface);
+	Device device = new Device (instance.vkInstance, presenter.vkSurface, 400, 400);
 
-	while (!window.shouldClose)
+	while (window.open)
 	{
 		window.pollEvents ();
 	}

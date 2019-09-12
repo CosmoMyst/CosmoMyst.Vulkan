@@ -1,13 +1,13 @@
 {
 	"fileVersion": 1,
 	"versions": {
+		"cosmomyst-core": {"path":"CosmoMyst.Core/"},
+		"cosmomyst-math": {"path":"CosmoMyst.Math/"},
 		"derelict-glfw3": "4.0.0-beta.1",
 		"derelict-sdl2": "3.1.0-alpha.4",
 		"derelict-util": "3.0.0-beta.2",
-		"erupted": "2.0.17+v1.1.94",
-		"intel-intrinsics": "1.0.13",
-		"monomyst-core": {"path":"MonoMyst.Core/"},
-		"monomyst-math": {"path":"MonoMyst.Math/"},
+		"erupted": "2.0.41+v1.1.120",
+		"intel-intrinsics": "1.0.32",
 		"xcb-d": "2.1.1+1.11.1"
 	}
 }
