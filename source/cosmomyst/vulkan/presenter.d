@@ -7,7 +7,7 @@ import cosmomyst.vulkan.swapchain;
 class Presenter
 {
     private VkImage [] images;
-    private VkImageView [] imageViews;
+    public VkImageView [] imageViews;
 
     private Device device;
 

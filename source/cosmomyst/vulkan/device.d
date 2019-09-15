@@ -14,10 +14,10 @@ private const string [] requiredDeviceExtensions =
 
 public class Device
 {
-    private VkPhysicalDevice physicalDevice;
+    public VkPhysicalDevice physicalDevice;
     public VkDevice device;
+    public VkSurfaceKHR surface;
     private VkInstance instance;
-    private VkSurfaceKHR surface;
     private VkQueue graphicsQueue;
     private VkQueue presentQueue;
 

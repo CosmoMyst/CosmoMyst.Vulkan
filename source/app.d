@@ -3,6 +3,8 @@ import cosmomyst.vulkan.surface;
 import cosmomyst.vulkan.instance;
 import cosmomyst.vulkan.presenter;
 import cosmomyst.vulkan.pipeline;
+import cosmomyst.vulkan.framebuffer;
+import cosmomyst.vulkan.commands;
 import erupted;
 
 void main ()
@@ -19,11 +21,19 @@ void main ()
 
 	GraphicsPipeline graphicsPipeline = new GraphicsPipeline (device);
 
+	Framebuffer framebuffer = new Framebuffer (presenter, graphicsPipeline, device);
+
+	CommandPool cmd = new CommandPool (device, framebuffer);
+	cmd.renderPassDelegate = &graphicsPipeline.startRenderPass;
+	cmd.record ();
+
 	while (window.open)
 	{
 		window.pollEvents ();
 	}
 
+	cmd.cleanup ();
+	framebuffer.cleanup ();
 	graphicsPipeline.cleanup ();
 	presenter.cleanup ();
 	device.cleanup ();

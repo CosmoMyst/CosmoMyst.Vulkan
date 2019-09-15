@@ -9,9 +9,9 @@ public class GraphicsPipeline
     private Device device;
 
     private VkPipelineLayout pipelineLayout;
-    private RenderPass renderPass;
+    public RenderPass renderPass;
 
-    private VkPipeline pipeline;
+    public VkPipeline pipeline;
 
     this (Device device)
     {
@@ -135,6 +135,37 @@ public class GraphicsPipeline
 
         vkDestroyShaderModule (device.device, vertShaderModule, null);
         vkDestroyShaderModule (device.device, fragShaderModule, null);
+    }
+
+    public void startRenderPass (VkCommandBuffer cmdBuffer, VkFramebuffer framebuffer)
+    {
+        import cosmomyst.vulkan.helpers : vkAssert;
+
+        VkRect2D renderArea =
+        {
+            offset: VkOffset2D (0, 0),
+            extent: device.swapchain.extent
+        };
+
+        VkClearValue clearColour;
+        clearColour.color.float32 = [0.0f, 0.0f, 0.0f, 1.0f];
+
+        VkRenderPassBeginInfo beginInfo =
+        {
+            renderPass: renderPass.renderPass,
+            framebuffer: framebuffer,
+            renderArea: renderArea,
+            clearValueCount: 1,
+            pClearValues: &clearColour
+        };
+
+        vkCmdBeginRenderPass (cmdBuffer, &beginInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+        vkCmdBindPipeline (cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+
+        vkCmdDraw (cmdBuffer, 3, 1, 0, 0);
+
+        vkCmdEndRenderPass (cmdBuffer);
     }
 
     private VkShaderModule createShaderModule (ubyte [] code)
