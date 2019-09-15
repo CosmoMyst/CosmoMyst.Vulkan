@@ -1,37 +1,71 @@
 module cosmomyst.vulkan.presenter;
 
 import erupted;
-import erupted.platform_extensions;
-import xcb.xcb;
-import cosmomyst.core;
-import cosmomyst.vulkan.helpers;
-
-mixin Platform_Extensions!USE_PLATFORM_XCB_KHR;
+import cosmomyst.vulkan.device;
+import cosmomyst.vulkan.swapchain;
 
 class Presenter
 {
-    @property VkSurfaceKHR vkSurface () { return surface; }
-    private VkSurfaceKHR surface;
-    private VkInstance instance;
+    private VkImage [] images;
+    private VkImageView [] imageViews;
 
-    this (VkInstance instance, XCBWindow window)
+    private Device device;
+
+    this (Device device)
     {
-        this.instance = instance;
+        this.device = device;
 
-        VkXcbSurfaceCreateInfoKHR createInfo =
+        images = getSwapchainImages (device.device, device.swapchain.swapchain);
+
+        createImageViews ();
+    }
+
+    private void createImageViews ()
+    {
+        import cosmomyst.vulkan.helpers : vkAssert;
+
+        foreach (VkImage image; images)
         {
-            connection: window.connection,
-            window: window.window
-        };
+            VkComponentMapping components =
+            {
+                r: VK_COMPONENT_SWIZZLE_IDENTITY,
+                g: VK_COMPONENT_SWIZZLE_IDENTITY,
+                b: VK_COMPONENT_SWIZZLE_IDENTITY,
+                a: VK_COMPONENT_SWIZZLE_IDENTITY
+            };
 
-        auto createXcbSurfaceKHR = cast (PFN_vkCreateXcbSurfaceKHR) vkGetInstanceProcAddr (instance, "vkCreateXcbSurfaceKHR");
+            VkImageSubresourceRange subresourceRange =
+            {
+                aspectMask: VK_IMAGE_ASPECT_COLOR_BIT,
+                baseMipLevel: 0,
+                levelCount: 1,
+                baseArrayLayer: 0,
+                layerCount: 1
+            };
 
-        assert (createXcbSurfaceKHR !is null, "Function is null");
-        vkAssert (createXcbSurfaceKHR (instance, &createInfo, null, &surface), "Failed to create XCB Surface");
+            VkImageViewCreateInfo createInfo =
+            {
+                sType: VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+                image: image,
+                viewType: VK_IMAGE_VIEW_TYPE_2D,
+                format: device.swapchain.format,
+                components: components,
+                subresourceRange: subresourceRange
+            };
+
+            VkImageView imageView;
+
+            vkAssert (vkCreateImageView (device.device, &createInfo, null, &imageView), "Failed to create an image view.");
+
+            imageViews ~= imageView;
+        }
     }
 
     void cleanup ()
     {
-        vkDestroySurfaceKHR (instance, surface, null);
+        foreach (VkImageView imageView; imageViews)
+        {
+            vkDestroyImageView (device.device, imageView, null);
+        }
     }
 }

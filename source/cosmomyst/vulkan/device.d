@@ -5,6 +5,7 @@ import erupted.vulkan_lib_loader;
 import std.typecons;
 import cosmomyst.vulkan.queues;
 import cosmomyst.vulkan.instance;
+import cosmomyst.vulkan.swapchain;
 
 private const string [] requiredDeviceExtensions =
 [
@@ -14,17 +15,16 @@ private const string [] requiredDeviceExtensions =
 public class Device
 {
     private VkPhysicalDevice physicalDevice;
-    private VkDevice device;
+    public VkDevice device;
     private VkInstance instance;
     private VkSurfaceKHR surface;
     private VkQueue graphicsQueue;
     private VkQueue presentQueue;
-    private VkSwapchainKHR swapchain;
+
+    public Swapchain swapchain;
 
     this (VkInstance instance, VkSurfaceKHR surface, uint width, uint height)
     {
-        import cosmomyst.vulkan.swapchain : createSwapchain;
-
         this.instance = instance;
         this.surface = surface;
 
@@ -160,7 +160,7 @@ public class Device
 
     void cleanup ()
     {
-        vkDestroySwapchainKHR (device, swapchain, null);
+        vkDestroySwapchainKHR (device, swapchain.swapchain, null);
         vkDestroyDevice (device, null);
     }
 }

@@ -1,6 +1,9 @@
 import cosmomyst.vulkan.device;
+import cosmomyst.vulkan.surface;
 import cosmomyst.vulkan.instance;
 import cosmomyst.vulkan.presenter;
+import cosmomyst.vulkan.pipeline;
+import erupted;
 
 void main ()
 {
@@ -10,15 +13,20 @@ void main ()
     XCBWindow window = new XCBWindow (400, 400);
 
 	Instance instance = new Instance ();
-	Presenter presenter = new Presenter (instance.vkInstance, window);
-	Device device = new Device (instance.vkInstance, presenter.vkSurface, 400, 400);
+	VkSurfaceKHR surface = createSurface (instance.vkInstance, window);
+	Device device = new Device (instance.vkInstance, surface, 400, 400);
+	Presenter presenter = new Presenter (device);
+
+	GraphicsPipeline graphicsPipeline = new GraphicsPipeline (device);
 
 	while (window.open)
 	{
 		window.pollEvents ();
 	}
 
-	device.cleanup ();
+	graphicsPipeline.cleanup ();
 	presenter.cleanup ();
+	device.cleanup ();
+	vkDestroySurfaceKHR (instance.vkInstance, surface, null);
 	instance.cleanup ();
 }

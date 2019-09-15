@@ -9,6 +9,13 @@ public struct SwapchainSupport
     public VkPresentModeKHR [] presentModes;
 }
 
+public struct Swapchain
+{
+    public VkSwapchainKHR swapchain;
+    public VkFormat format;
+    public VkExtent2D extent;
+}
+
 public SwapchainSupport querySwapchainSupport (VkPhysicalDevice device, VkSurfaceKHR surface)
 {
     SwapchainSupport support;
@@ -36,7 +43,7 @@ public SwapchainSupport querySwapchainSupport (VkPhysicalDevice device, VkSurfac
     return support;
 }
 
-public VkSwapchainKHR createSwapchain (VkPhysicalDevice physicalDevice, VkDevice device, VkSurfaceKHR surface, uint width, uint height)
+public Swapchain createSwapchain (VkPhysicalDevice physicalDevice, VkDevice device, VkSurfaceKHR surface, uint width, uint height)
 {
     import cosmomyst.vulkan.queues : QueueFamilyIndices;
     import cosmomyst.vulkan.device : findQueueFamilies;
@@ -90,7 +97,19 @@ public VkSwapchainKHR createSwapchain (VkPhysicalDevice physicalDevice, VkDevice
 
     vkAssert (vkCreateSwapchainKHR (device, &createInfo, null, &res), "Failed to create a swapchain.");
 
-    return res;
+    return Swapchain (res, format.format, extent);
+}
+
+public VkImage [] getSwapchainImages (VkDevice device, VkSwapchainKHR swapchain)
+{
+    VkImage [] images;
+    uint imageCount;
+
+    vkGetSwapchainImagesKHR (device, swapchain, &imageCount, null);
+    images.length = imageCount;
+    vkGetSwapchainImagesKHR (device, swapchain, &imageCount, images.ptr);
+
+    return images;
 }
 
 private VkSurfaceFormatKHR chooseSwapSurfaceFormat (const VkSurfaceFormatKHR [] availableFormats)
